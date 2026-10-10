@@ -76,26 +76,14 @@ const BALANCE = {
 
 // ============ КАРТА ============
 const MAP = { W: 40, H: 30, TILE: 40 };
-
-const TILE = { GROUND: 0, GRASS: 1, MOUNTAIN: 2, WATER: 3 };
-
-const TILE_COLORS = {
-  [TILE.GROUND]:   '#1a2230',
-  [TILE.GRASS]:    '#16281f',
-  [TILE.MOUNTAIN]: '#3a3530',
-  [TILE.WATER]:    '#0a2233',
-};
-
-const CITY_COLORS = {
-  aurora:  '#00d4ff',
-  vesper:  '#ff3b5c',
-  neutral: '#8892a6',
-};
+const WORLD_W = MAP.W * MAP.TILE;
+const WORLD_H = MAP.H * MAP.TILE;
 
 let map = [];
 let CITIES = [];
 let ROADS = [];
 let ACTIVE_ATTACKS = [];
+let RIVER_POINTS = [];
 
 let seed = 12345;
 function rand() {
@@ -103,18 +91,9 @@ function rand() {
   return seed / 233280;
 }
 
-const tileNoise = new Map();
-function getTileNoise(x, y) {
-  const key = x + ',' + y;
-  if (!tileNoise.has(key)) {
-    const n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000;
-    tileNoise.set(key, Math.abs(n));
-  }
-  return tileNoise.get(key);
-}
-
 // ============ CANVAS ============
 let canvas, ctx, dpr = window.devicePixelRatio || 1;
+let worldCanvas, worldCtx;
 
 const camera = {
   x: 0, y: 0,
@@ -214,70 +193,14 @@ document.getElementById('start-btn').addEventListener('click', startGame);
   updateDifficultyDesc(state.settings.difficulty);
 })();
 
-// ============ ГЕНЕРАЦИЯ КАРТЫ ============
+// ============ ГЕНЕРАЦИЯ КАРТЫ (логика) ============
 function generateMap() {
   map = [];
   for (let y = 0; y < MAP.H; y++) {
     const row = [];
-    for (let x = 0; x < MAP.W; x++) {
-      row.push(TILE.GROUND);
-    }
+    for (let x = 0; x < MAP.W; x++) row.push(0);
     map.push(row);
   }
-
-  for (let y = 0; y < MAP.H; y++) {
-    for (let x = 0; x < MAP.W; x++) {
-      if (x === 0 || y === 0 || x === MAP.W - 1 || y === MAP.H - 1) {
-        map[y][x] = TILE.MOUNTAIN;
-      }
-    }
-  }
-
-  for (let i = 0; i < 8; i++) {
-    const cx = 4 + Math.floor(rand() * (MAP.W - 8));
-    const cy = 4 + Math.floor(rand() * (MAP.H - 8));
-    const size = 2 + Math.floor(rand() * 3);
-
-    for (let dy = -size; dy <= size; dy++) {
-      for (let dx = -size; dx <= size; dx++) {
-        const dist = Math.hypot(dx, dy);
-        if (dist > size) continue;
-        if (rand() < 1 - dist / size) {
-          const nx = cx + dx, ny = cy + dy;
-          if (map[ny] && map[ny][nx] !== undefined) {
-            map[ny][nx] = TILE.MOUNTAIN;
-          }
-        }
-      }
-    }
-  }
-
-  let rx = 19;
-  for (let y = 1; y < MAP.H - 1; y++) {
-    rx += Math.floor(rand() * 3) - 1;
-    rx = Math.max(17, Math.min(22, rx));
-    if (map[y]) map[y][rx] = TILE.WATER;
-    if (rand() < 0.3 && map[y] && map[y][rx + 1] !== undefined) map[y][rx + 1] = TILE.WATER;
-  }
-
-  for (let i = 0; i < 15; i++) {
-    const cx = Math.floor(rand() * MAP.W);
-    const cy = Math.floor(rand() * MAP.H);
-    const size = 2 + Math.floor(rand() * 3);
-    for (let dy = -size; dy <= size; dy++) {
-      for (let dx = -size; dx <= size; dx++) {
-        if (rand() < 0.5 && map[cy + dy] && map[cy + dy][cx + dx] === TILE.GROUND) {
-          map[cy + dy][cx + dx] = TILE.GRASS;
-        }
-      }
-    }
-  }
-}
-
-function isPassable(x, y) {
-  if (x < 0 || y < 0 || x >= MAP.W || y >= MAP.H) return false;
-  const t = map[y][x];
-  return t !== TILE.MOUNTAIN && t !== TILE.WATER;
 }
 
 // ============ ГЕНЕРАЦИЯ ГОРОДОВ ============
@@ -324,7 +247,6 @@ function generateCities() {
         const x = zone.xMin + Math.floor(rand() * (zone.xMax - zone.xMin));
         const y = zone.yMin + Math.floor(rand() * (zone.yMax - zone.yMin));
 
-        if (!isPassable(x, y)) continue;
         if (CITIES.some(c => Math.abs(c.x - x) < 3 && Math.abs(c.y - y) < 3)) continue;
 
         CITIES.push({
@@ -343,12 +265,6 @@ function generateCities() {
 }
 
 // ============ ГЕНЕРАЦИЯ ДОРОГ ============
-function hasRoad(a, b) {
-  return ROADS.some(r =>
-    (r.from === a && r.to === b) || (r.from === b && r.to === a)
-  );
-}
-
 function getRoadsFrom(city) {
   return ROADS
     .filter(r => r.from === city || r.to === city)
@@ -359,7 +275,6 @@ function generateRoads() {
   ROADS = [];
   const seen = new Set();
 
-  // === 1. Внутренние дороги каждой фракции ===
   CITIES.forEach(city => {
     const neighbors = CITIES
       .filter(c => c !== city)
@@ -368,20 +283,19 @@ function generateRoads() {
 
     let maxLinks;
     switch (city.type) {
-      case 'capital': maxLinks = 5; break;
-      case 'large':   maxLinks = 4; break;
-      case 'medium':  maxLinks = 3; break;
+      case 'capital': maxLinks = 4; break;
+      case 'large':   maxLinks = 3; break;
+      case 'medium':  maxLinks = 2; break;
       default:        maxLinks = 2;
     }
 
     let links = 0;
     for (const { city: neighbor, dist } of neighbors) {
       if (links >= maxLinks) break;
-      if (dist > 10) break;
+      if (dist > 8) break;
 
       const key = [CITIES.indexOf(city), CITIES.indexOf(neighbor)].sort().join('-');
       if (seen.has(key)) { links++; continue; }
-
       if (city.owner !== neighbor.owner) continue;
 
       seen.add(key);
@@ -394,7 +308,7 @@ function generateRoads() {
     }
   });
 
-  // === 2. Межфракционные дороги (граница) ===
+  // Межфракционные
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
 
@@ -408,20 +322,157 @@ function generateRoads() {
 
     for (const { city: vCity, dist } of enemyNeighbors) {
       if (borderLinks >= maxBorderLinks) break;
-      if (dist > 12) break;
+      if (dist > 10) break;
 
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
 
-      ROADS.push({
-        from: aCity,
-        to: vCity,
-        type: 'border',
-      });
+      ROADS.push({ from: aCity, to: vCity, type: 'border' });
       borderLinks++;
     }
   });
+}
+
+// ============ ГЕНЕРАЦИЯ WORLD CANVAS (Voronoi + река) ============
+function generateWorldCanvas() {
+  worldCanvas = document.createElement('canvas');
+  worldCanvas.width = WORLD_W;
+  worldCanvas.height = WORLD_H;
+  worldCtx = worldCanvas.getContext('2d');
+
+  // 1. Базовый тёмный фон
+  worldCtx.fillStyle = '#1a1d24';
+  worldCtx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+  // 2. Регионы Voronoi (рисуем цветными пятнами с размытием)
+  drawRegions();
+
+  // 3. Границы регионов (тёмные тонкие линии)
+  drawBorders();
+
+  // 4. Река
+  drawRiver();
+
+  // 5. Легкий шум/текстура
+  drawTexture();
+}
+
+function drawRegions() {
+  const cities = CITIES.map(c => ({
+    x: c.x * MAP.TILE + MAP.TILE / 2,
+    y: c.y * MAP.TILE + MAP.TILE / 2,
+    owner: c.owner,
+  }));
+
+  const step = 3;
+  for (let py = 0; py < WORLD_H; py += step) {
+    for (let px = 0; px < WORLD_W; px += step) {
+      let minDist = Infinity;
+      let nearest = null;
+      for (const c of cities) {
+        const d = (c.x - px) ** 2 + (c.y - py) ** 2;
+        if (d < minDist) {
+          minDist = d;
+          nearest = c;
+        }
+      }
+
+      let color;
+      if (nearest.owner === 'aurora') {
+        color = 'rgba(0, 50, 80, 0.55)';
+      } else if (nearest.owner === 'vesper') {
+        color = 'rgba(80, 15, 30, 0.55)';
+      } else {
+        color = 'rgba(40, 44, 52, 0.4)';
+      }
+
+      worldCtx.fillStyle = color;
+      worldCtx.fillRect(px, py, step, step);
+    }
+  }
+}
+
+function drawBorders() {
+  const cities = CITIES.map(c => ({
+    x: c.x * MAP.TILE + MAP.TILE / 2,
+    y: c.y * MAP.TILE + MAP.TILE / 2,
+    owner: c.owner,
+  }));
+
+  worldCtx.strokeStyle = 'rgba(10, 12, 16, 0.9)';
+  worldCtx.lineWidth = 1;
+  worldCtx.lineCap = 'round';
+
+  // Рисуем границы через соседей — линии между городами разных владельцев
+  const seen = new Set();
+  cities.forEach((a, i) => {
+    cities.forEach((b, j) => {
+      if (i >= j) return;
+      if (a.owner === b.owner) return;
+
+      const key = i + '-' + j;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      if (dist > 300) return; // только близкие
+
+      // Середина — граница
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+
+      // Перпендикуляр
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      // Рисуем линию длиной 60px
+      worldCtx.beginPath();
+      worldCtx.moveTo(mx - nx * 30, my - ny * 30);
+      worldCtx.lineTo(mx + nx * 30, my + ny * 30);
+      worldCtx.stroke();
+    });
+  });
+}
+
+function drawRiver() {
+  RIVER_POINTS = [];
+  let px = WORLD_W * 0.45;
+  let phase = 0;
+
+  worldCtx.strokeStyle = '#0f2233';
+  worldCtx.lineWidth = 8;
+  worldCtx.lineCap = 'round';
+  worldCtx.lineJoin = 'round';
+  worldCtx.beginPath();
+  worldCtx.moveTo(px, 0);
+
+  for (let py = 0; py < WORLD_H; py += 8) {
+    phase += 0.15;
+    px += Math.sin(phase) * 12;
+    px = Math.max(WORLD_W * 0.35, Math.min(WORLD_W * 0.65, px));
+    worldCtx.lineTo(px, py);
+    RIVER_POINTS.push({ x: px, y: py });
+  }
+  worldCtx.stroke();
+
+  // Светлая кромка
+  worldCtx.strokeStyle = '#1e4260';
+  worldCtx.lineWidth = 3;
+  worldCtx.stroke();
+}
+
+function drawTexture() {
+  // Простой шум — точки
+  worldCtx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+  for (let i = 0; i < 800; i++) {
+    const x = rand() * WORLD_W;
+    const y = rand() * WORLD_H;
+    worldCtx.fillRect(x, y, 2, 2);
+  }
 }
 
 // ============ CANVAS ============
@@ -437,10 +488,6 @@ function resizeCanvas() {
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function screenTileSize() {
-  return MAP.TILE * camera.zoom;
 }
 
 function centerOnPlayerBase() {
@@ -460,27 +507,18 @@ function centerOnPlayerBase() {
 
 function clampCamera() {
   const rect = canvas.getBoundingClientRect();
-  const worldW = MAP.W * MAP.TILE;
-  const worldH = MAP.H * MAP.TILE;
   const viewW = rect.width / camera.zoom;
   const viewH = rect.height / camera.zoom;
 
-  if (worldW <= viewW) {
-    camera.x = (worldW - viewW) / 2;
-  } else {
-    camera.x = Math.max(0, Math.min(worldW - viewW, camera.x));
-  }
+  if (WORLD_W <= viewW) camera.x = (WORLD_W - viewW) / 2;
+  else camera.x = Math.max(0, Math.min(WORLD_W - viewW, camera.x));
 
-  if (worldH <= viewH) {
-    camera.y = (worldH - viewH) / 2;
-  } else {
-    camera.y = Math.max(0, Math.min(worldH - viewH, camera.y));
-  }
+  if (WORLD_H <= viewH) camera.y = (WORLD_H - viewH) / 2;
+  else camera.y = Math.max(0, Math.min(WORLD_H - viewH, camera.y));
 }
 
-// ============ УПРАВЛЕНИЕ КАМЕРОЙ ============
+// ============ УПРАВЛЕНИЕ ============
 function initCameraControls() {
-  // Мышь
   canvas.addEventListener('mousedown', e => {
     camera.dragging = true;
     camera.moved = false;
@@ -513,7 +551,6 @@ function initCameraControls() {
     zoomAt(e.clientX, e.clientY, factor);
   }, { passive: false });
 
-  // Тач
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
 
@@ -565,18 +602,14 @@ function initCameraControls() {
   canvas.addEventListener('touchend', e => {
     e.preventDefault();
 
-    if (camera.pinching && e.touches.length < 2) {
-      camera.pinching = false;
-    }
+    if (camera.pinching && e.touches.length < 2) camera.pinching = false;
 
     if (camera.dragging && !camera.moved && e.changedTouches[0] && e.touches.length === 0) {
       const t = e.changedTouches[0];
       handleCanvasClick(t.clientX, t.clientY);
     }
 
-    if (e.touches.length === 0) {
-      camera.dragging = false;
-    }
+    if (e.touches.length === 0) camera.dragging = false;
   }, { passive: false });
 }
 
@@ -602,13 +635,11 @@ function applyZoomAt(localX, localY, newZoom) {
 
 function zoomByCenter(factor) {
   const rect = canvas.getBoundingClientRect();
-  const cx = rect.width / 2;
-  const cy = rect.height / 2;
   const newZoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.zoom * factor));
-  applyZoomAt(cx, cy, newZoom);
+  applyZoomAt(rect.width / 2, rect.height / 2, newZoom);
 }
 
-// ============ КЛИК ПО КАРТЕ ============
+// ============ КЛИК ============
 function handleCanvasClick(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const localX = clientX - rect.left;
@@ -617,12 +648,21 @@ function handleCanvasClick(clientX, clientY) {
   const worldX = localX / camera.zoom + camera.x;
   const worldY = localY / camera.zoom + camera.y;
 
-  const tileX = Math.floor(worldX / MAP.TILE);
-  const tileY = Math.floor(worldY / MAP.TILE);
+  // Ищем ближайший город в радиусе 30px
+  let closest = null;
+  let minDist = 30;
+  CITIES.forEach(c => {
+    const cx = c.x * MAP.TILE + MAP.TILE / 2;
+    const cy = c.y * MAP.TILE + MAP.TILE / 2;
+    const d = Math.hypot(worldX - cx, worldY - cy);
+    if (d < minDist) {
+      minDist = d;
+      closest = c;
+    }
+  });
 
-  const city = CITIES.find(c => c.x === tileX && c.y === tileY);
-  if (city) {
-    openCityPanel(city);
+  if (closest) {
+    openCityPanel(closest);
   } else {
     closeCityPanel();
     closeAttackTargetPanel();
@@ -690,7 +730,7 @@ function closeCityPanel() {
 
 document.getElementById('city-panel-close').addEventListener('click', closeCityPanel);
 
-// ============ ПАНЕЛЬ ЦЕЛЕЙ (свой город) ============
+// ============ ПАНЕЛИ ============
 function openAttackTargetPanel() {
   if (!selectedCity) return;
   const dict = LANG[state.settings.language];
@@ -732,7 +772,6 @@ function closeAttackTargetPanel() {
 
 document.getElementById('attack-target-close').addEventListener('click', closeAttackTargetPanel);
 
-// ============ ПАНЕЛЬ ИСТОЧНИКОВ (вражеский город) ============
 function openAttackSourcesPanel(targetCity, sources) {
   const panel = document.getElementById('attack-sources-panel');
   const list = document.getElementById('attack-sources-list');
@@ -764,7 +803,7 @@ function closeAttackSourcesPanel() {
 
 document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
-// ============ НАСТУПЛЕНИЕ ============
+// ============ АТАКА ============
 function launchAttack(fromCity, toCity) {
   if (fromCity.garrison < 1) return;
   const units = fromCity.garrison;
@@ -929,104 +968,26 @@ function updateHUD() {
 }
 
 // ============ РЕНДЕР ============
-function renderTile(x, y, sx, sy, size) {
-  const t = map[y][x];
-  const noise = getTileNoise(x, y);
-
-  if (t === TILE.GROUND) {
-    const base = 26 + noise * 8;
-    ctx.fillStyle = `rgb(${base}, ${base + 8}, ${base + 18})`;
-    ctx.fillRect(sx, sy, size, size);
-    if (noise > 0.7 && size > 12) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-      ctx.fillRect(sx + noise * size * 0.5, sy + (1 - noise) * size * 0.5, size * 0.05, size * 0.05);
-    }
-  } else if (t === TILE.GRASS) {
-    const g = 30 + noise * 15;
-    ctx.fillStyle = `rgb(${20 + noise * 10}, ${g}, ${20 + noise * 5})`;
-    ctx.fillRect(sx, sy, size, size);
-    if (size > 20) {
-      ctx.strokeStyle = 'rgba(60, 120, 60, 0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(sx + size * 0.2, sy + size - 4);
-      ctx.lineTo(sx + size * 0.2 + noise * 4 - 2, sy + size * 0.2);
-      ctx.moveTo(sx + size * 0.8, sy + size - 4);
-      ctx.lineTo(sx + size * 0.8 + (1 - noise) * 4 - 2, sy + size * 0.25);
-      ctx.stroke();
-    }
-  } else if (t === TILE.MOUNTAIN) {
-    const g = 50 + noise * 20;
-    ctx.fillStyle = `rgb(${g}, ${g - 10}, ${g - 15})`;
-    ctx.fillRect(sx, sy, size, size);
-
-    if (size > 15) {
-      ctx.fillStyle = `rgba(30, 25, 22, 0.6)`;
-      ctx.beginPath();
-      ctx.moveTo(sx + size * 0.5, sy + size * 0.15);
-      ctx.lineTo(sx + size * 0.15, sy + size - size * 0.1);
-      ctx.lineTo(sx + size * 0.85, sy + size - size * 0.1);
-      ctx.closePath();
-      ctx.fill();
-
-      if (noise > 0.6 && size > 25) {
-        ctx.fillStyle = 'rgba(220, 220, 220, 0.5)';
-        ctx.beginPath();
-        ctx.moveTo(sx + size * 0.5, sy + size * 0.15);
-        ctx.lineTo(sx + size * 0.4, sy + size * 0.35);
-        ctx.lineTo(sx + size * 0.6, sy + size * 0.35);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-  } else if (t === TILE.WATER) {
-    const b = 60 + noise * 20;
-    ctx.fillStyle = `rgb(10, ${b * 0.6}, ${b})`;
-    ctx.fillRect(sx, sy, size, size);
-
-    if (size > 15) {
-      ctx.strokeStyle = 'rgba(100, 180, 220, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let i = 0; i < 2; i++) {
-        const wy = sy + size * 0.3 + i * size * 0.35;
-        ctx.moveTo(sx + size * 0.15, wy);
-        ctx.quadraticCurveTo(sx + size * 0.5, wy - 2, sx + size * 0.85, wy);
-      }
-      ctx.stroke();
-    }
-  }
-
-  if (size > 12) {
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx + 0.5, sy + 0.5, size - 1, size - 1);
-  }
-}
-
 function renderMap() {
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   const w = rect.width;
   const h = rect.height;
 
-  ctx.fillStyle = '#060913';
+  ctx.fillStyle = '#0a0e1a';
   ctx.fillRect(0, 0, w, h);
 
-  const tileSize = screenTileSize();
+  // Копируем видимую часть worldCanvas
+  const srcX = camera.x;
+  const srcY = camera.y;
+  const srcW = w / camera.zoom;
+  const srcH = h / camera.zoom;
 
-  const x0 = Math.max(0, Math.floor(camera.x / MAP.TILE));
-  const y0 = Math.max(0, Math.floor(camera.y / MAP.TILE));
-  const x1 = Math.min(MAP.W - 1, Math.ceil((camera.x + w / camera.zoom) / MAP.TILE));
-  const y1 = Math.min(MAP.H - 1, Math.ceil((camera.y + h / camera.zoom) / MAP.TILE));
-
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      const sx = (x * MAP.TILE - camera.x) * camera.zoom;
-      const sy = (y * MAP.TILE - camera.y) * camera.zoom;
-      renderTile(x, y, sx, sy, tileSize);
-    }
-  }
+  ctx.drawImage(
+    worldCanvas,
+    srcX, srcY, srcW, srcH,
+    0, 0, w, h
+  );
 
   renderRoads();
   renderAttacks();
@@ -1035,7 +996,7 @@ function renderMap() {
 
 function renderRoads() {
   const rect = canvas.getBoundingClientRect();
-  const tileSize = screenTileSize();
+  const tileSize = MAP.TILE * camera.zoom;
 
   ROADS.forEach(road => {
     const a = road.from, b = road.to;
@@ -1048,31 +1009,22 @@ function renderRoads() {
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
 
-    const color = road.type === 'own'    ? '#00d4ff'
-                : road.type === 'enemy'  ? '#ff3b5c'
-                : road.type === 'border' ? '#8892a6'
-                : '#8892a6';
-
-    const lineWidth = Math.max(1, 1.5 * camera.zoom);
-    const dash = Math.max(3, 5 * camera.zoom);
+    const color = road.type === 'own'    ? 'rgba(0, 212, 255, 0.35)'
+                : road.type === 'enemy'  ? 'rgba(255, 59, 92, 0.35)'
+                : 'rgba(180, 190, 210, 0.3)';
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
-    ctx.setLineDash([dash, dash]);
-    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
-
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
   });
 }
 
 function renderAttacks() {
-  const tileSize = screenTileSize();
+  const tileSize = MAP.TILE * camera.zoom;
 
   ACTIVE_ATTACKS.forEach(atk => {
     const a = atk.from, b = atk.to;
@@ -1112,67 +1064,67 @@ function renderAttacks() {
 }
 
 function renderCities() {
-  const tileSize = screenTileSize();
+  const tileSize = MAP.TILE * camera.zoom;
   const rect = canvas.getBoundingClientRect();
-
-  const x0 = Math.max(0, Math.floor(camera.x / MAP.TILE) - 1);
-  const y0 = Math.max(0, Math.floor(camera.y / MAP.TILE) - 1);
-  const x1 = Math.min(MAP.W, Math.ceil((camera.x + rect.width / camera.zoom) / MAP.TILE) + 1);
-  const y1 = Math.min(MAP.H, Math.ceil((camera.y + rect.height / camera.zoom) / MAP.TILE) + 1);
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   CITIES.forEach(c => {
-    if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) return;
-
     const sx = (c.x * MAP.TILE - camera.x) * camera.zoom;
     const sy = (c.y * MAP.TILE - camera.y) * camera.zoom;
-    const color = CITY_COLORS[c.owner];
 
-    const sizeRatio = c.type === 'capital' ? 0.75
-                    : c.type === 'large' ? 0.55
-                    : c.type === 'medium' ? 0.45
-                    : 0.35;
-    const radius = tileSize * sizeRatio / 2;
+    if (sx < -100 || sx > rect.width + 100 || sy < -100 || sy > rect.height + 100) return;
 
+    const color = c.owner === 'aurora' ? '#00d4ff'
+                : c.owner === 'vesper' ? '#ff3b5c'
+                : '#8892a6';
+
+    const radiusRatio = c.type === 'capital' ? 0.32
+                      : c.type === 'large' ? 0.24
+                      : c.type === 'medium' ? 0.18
+                      : 0.13;
+    const radius = Math.max(3, tileSize * radiusRatio);
+
+    // Свечение
     ctx.shadowColor = color;
-    ctx.shadowBlur = c.type === 'capital' ? 16 : 8;
+    ctx.shadowBlur = c.type === 'capital' ? 24 : 12;
 
+    // Круг города
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    if (c.type === 'capital' && tileSize > 20) {
-      ctx.font = `${tileSize * 0.55}px sans-serif`;
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🏠', sx + tileSize / 2, sy + tileSize / 2 + 2);
-    }
+    // Внутренняя точка
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (camera.zoom < 0.7 && c.type !== 'capital' && c.type !== 'large') return;
+    // Название
+    if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
-    ctx.textBaseline = 'top';
-
-    const fontSize = Math.max(8,
-      (c.type === 'capital' ? 12 : c.type === 'large' ? 11 : c.type === 'medium' ? 10 : 9) * camera.zoom
+    const fontSize = Math.max(9,
+      (c.type === 'capital' ? 13 : c.type === 'large' ? 12 : c.type === 'medium' ? 11 : 10) * Math.max(0.8, camera.zoom)
     );
     ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+    ctx.textBaseline = 'top';
 
-    const textY = sy + tileSize + 2;
     const textX = sx + tileSize / 2;
+    const textY = sy + tileSize / 2 + radius + 4;
 
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
-    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
-    ctx.strokeText(c.name, textX, textY);
+    const textWidth = ctx.measureText(c.name).width;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(textX - textWidth / 2 - 3, textY - 1, textWidth + 6, fontSize + 2);
 
     ctx.fillStyle = color;
     ctx.fillText(c.name, textX, textY);
   });
 }
 
-// ============ СТАРТ ИГРЫ ============
+// ============ СТАРТ ============
 function startGame() {
   const s = state.settings;
   state.faction = s.faction;
@@ -1197,10 +1149,10 @@ function startGame() {
   document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
 
   seed = 12345;
-  tileNoise.clear();
   generateMap();
   generateCities();
   generateRoads();
+  generateWorldCanvas();
 
   initCanvas();
   initCameraControls();

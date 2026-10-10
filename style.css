@@ -121,7 +121,6 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  letter-spacing: 0.3px;
   font-family: inherit;
 }
 
@@ -295,7 +294,7 @@ body {
   height: 100%;
   display: block;
   flex: 1;
-  background: #060913;
+  background: #1a1d24;
   touch-action: none;
   overscroll-behavior: none;
 }
