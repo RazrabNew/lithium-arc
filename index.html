@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Литийная Дуга</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css">
@@ -75,6 +75,8 @@
           <button class="speed-btn" data-speed="4">×4</button>
         </div>
         <div class="speed-group">
+          <button class="zoom-btn" id="zoom-out">−</button>
+          <button class="zoom-btn" id="zoom-in">+</button>
           <button class="city-btn" id="city-list-btn">🏙️</button>
           <button id="pause-btn">⏸</button>
         </div>
@@ -82,25 +84,23 @@
     </div>
     <canvas id="game"></canvas>
 
-    <!-- Панель выбранного города -->
     <div id="city-panel" class="city-panel hidden">
       <div class="city-panel-header">
         <span id="city-panel-name">Город</span>
         <button id="city-panel-close">✕</button>
       </div>
       <div class="city-panel-body">
-        <div class="city-stat"><span>Владелец:</span><span id="city-owner">—</span></div>
-        <div class="city-stat"><span>Тип:</span><span id="city-type">—</span></div>
-        <div class="city-stat"><span>Гарнизон:</span><span id="city-garrison">0</span></div>
-        <div class="city-stat"><span>Инфраструктура:</span><span id="city-infra">0%</span></div>
-        <div class="city-stat"><span>Доход:</span><span id="city-income">+0.0/с</span></div>
+        <div class="city-stat"><span data-i18n="cityOwner">Владелец:</span><span id="city-owner">—</span></div>
+        <div class="city-stat"><span data-i18n="cityType">Тип:</span><span id="city-type">—</span></div>
+        <div class="city-stat"><span data-i18n="cityGarrison">Гарнизон:</span><span id="city-garrison">0</span></div>
+        <div class="city-stat"><span data-i18n="cityInfra">Инфраструктура:</span><span id="city-infra">0%</span></div>
+        <div class="city-stat"><span data-i18n="cityIncome">Доход:</span><span id="city-income">+0.0/с</span></div>
       </div>
       <div class="city-panel-actions">
-        <button id="city-attack-btn" class="action-btn">⚔️ Наступление</button>
+        <button id="city-attack-btn" class="action-btn" data-i18n="attackBtn">⚔️ Наступление</button>
       </div>
     </div>
 
-    <!-- Панель выбора цели наступления -->
     <div id="attack-target-panel" class="city-panel hidden">
       <div class="city-panel-header">
         <span data-i18n="chooseTarget">Выберите цель</span>
@@ -109,7 +109,6 @@
       <div class="city-panel-body" id="attack-targets"></div>
     </div>
 
-    <!-- Модалка Game Over -->
     <div id="gameover-modal" class="modal hidden">
       <div class="modal-content">
         <h2 id="gameover-title">Игра окончена</h2>

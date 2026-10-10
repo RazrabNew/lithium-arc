@@ -38,6 +38,8 @@ const LANG = {
     chooseTarget: 'Выберите цель', backToMenu: 'В меню',
     ownerAurora: 'Аврора', ownerVesper: 'Веспер', ownerNeutral: 'Нейтрал',
     typeCapital: 'Столица', typeLarge: 'Крупный', typeMedium: 'Средний', typeSmall: 'Малый',
+    cityOwner: 'Владелец:', cityType: 'Тип:', cityGarrison: 'Гарнизон:',
+    cityInfra: 'Инфраструктура:', cityIncome: 'Доход:', attackBtn: '⚔️ Наступление',
   },
   en: {
     gameTitle: 'LITHIUM ARC', gameSubtitle: 'Real-time strategy for the resource of the future',
@@ -51,6 +53,8 @@ const LANG = {
     chooseTarget: 'Choose target', backToMenu: 'Back to menu',
     ownerAurora: 'Aurora', ownerVesper: 'Vesper', ownerNeutral: 'Neutral',
     typeCapital: 'Capital', typeLarge: 'Large', typeMedium: 'Medium', typeSmall: 'Small',
+    cityOwner: 'Owner:', cityType: 'Type:', cityGarrison: 'Garrison:',
+    cityInfra: 'Infrastructure:', cityIncome: 'Income:', attackBtn: '⚔️ Attack',
   },
 };
 
@@ -99,15 +103,34 @@ function rand() {
   return seed / 233280;
 }
 
+// Кэш шума для тайлов
+const tileNoise = new Map();
+function getTileNoise(x, y) {
+  const key = x + ',' + y;
+  if (!tileNoise.has(key)) {
+    const n = ((x * 73856093) ^ (y * 19349663)) % 1000 / 1000;
+    tileNoise.set(key, Math.abs(n));
+  }
+  return tileNoise.get(key);
+}
+
 // ============ CANVAS ============
 let canvas, ctx, dpr = window.devicePixelRatio || 1;
 
 const camera = {
   x: 0, y: 0,
+  zoom: 1,
+  minZoom: 0.5,
+  maxZoom: 2.5,
   dragging: false,
   dragStartX: 0, dragStartY: 0,
   cameraStartX: 0, cameraStartY: 0,
   moved: false,
+  pinching: false,
+  pinchStartDist: 0,
+  pinchStartZoom: 1,
+  pinchCenterX: 0,
+  pinchCenterY: 0,
 };
 
 // ============ МЕНЮ ============
@@ -198,31 +221,61 @@ function generateMap() {
   for (let y = 0; y < MAP.H; y++) {
     const row = [];
     for (let x = 0; x < MAP.W; x++) {
-      let t = TILE.GROUND;
-      if ((x * 7 + y * 13) % 5 === 0) t = TILE.GRASS;
-      if (x === 0 || y === 0 || x === MAP.W - 1 || y === MAP.H - 1) t = TILE.MOUNTAIN;
-      row.push(t);
+      row.push(TILE.GROUND);
     }
     map.push(row);
   }
 
-  // Горы-кластеры в центре
-  for (let i = 0; i < 25; i++) {
-    const cx = 18 + Math.floor(rand() * 4);
-    const cy = Math.floor(rand() * MAP.H);
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (rand() < 0.5 && map[cy + dy] && map[cy + dy][cx + dx] !== undefined) {
-          map[cy + dy][cx + dx] = TILE.MOUNTAIN;
+  // Рамка из гор
+  for (let y = 0; y < MAP.H; y++) {
+    for (let x = 0; x < MAP.W; x++) {
+      if (x === 0 || y === 0 || x === MAP.W - 1 || y === MAP.H - 1) {
+        map[y][x] = TILE.MOUNTAIN;
+      }
+    }
+  }
+
+  // Горы — 8 кластеров
+  for (let i = 0; i < 8; i++) {
+    const cx = 4 + Math.floor(rand() * (MAP.W - 8));
+    const cy = 4 + Math.floor(rand() * (MAP.H - 8));
+    const size = 2 + Math.floor(rand() * 3);
+
+    for (let dy = -size; dy <= size; dy++) {
+      for (let dx = -size; dx <= size; dx++) {
+        const dist = Math.hypot(dx, dy);
+        if (dist > size) continue;
+        if (rand() < 1 - dist / size) {
+          const nx = cx + dx, ny = cy + dy;
+          if (map[ny] && map[ny][nx] !== undefined) {
+            map[ny][nx] = TILE.MOUNTAIN;
+          }
         }
       }
     }
   }
 
-  // Река по центру
-  for (let y = 0; y < MAP.H; y++) {
-    const rx = 19 + Math.floor(rand() * 2);
+  // Извилистая река по центру
+  let rx = 19;
+  for (let y = 1; y < MAP.H - 1; y++) {
+    rx += Math.floor(rand() * 3) - 1;
+    rx = Math.max(17, Math.min(22, rx));
     if (map[y]) map[y][rx] = TILE.WATER;
+    if (rand() < 0.3 && map[y] && map[y][rx + 1] !== undefined) map[y][rx + 1] = TILE.WATER;
+  }
+
+  // Трава
+  for (let i = 0; i < 15; i++) {
+    const cx = Math.floor(rand() * MAP.W);
+    const cy = Math.floor(rand() * MAP.H);
+    const size = 2 + Math.floor(rand() * 3);
+    for (let dy = -size; dy <= size; dy++) {
+      for (let dx = -size; dx <= size; dx++) {
+        if (rand() < 0.5 && map[cy + dy] && map[cy + dy][cx + dx] === TILE.GROUND) {
+          map[cy + dy][cx + dx] = TILE.GRASS;
+        }
+      }
+    }
   }
 }
 
@@ -236,7 +289,6 @@ function isPassable(x, y) {
 function generateCities() {
   CITIES = [];
 
-  // Столицы — фиксированные позиции
   CITIES.push({
     x: 3, y: 3, type: 'capital', owner: 'aurora',
     name: 'Аврора', baseIncome: 1.5, basePop: 5, infrastructure: 100, garrison: 5,
@@ -348,7 +400,7 @@ function generateRoads() {
   });
 }
 
-// ============ CANVAS ИНИЦИАЛИЗАЦИЯ ============
+// ============ CANVAS ============
 function initCanvas() {
   canvas = document.getElementById('game');
   ctx = canvas.getContext('2d');
@@ -363,12 +415,22 @@ function resizeCanvas() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+function screenTileSize() {
+  return MAP.TILE * camera.zoom;
+}
+
 function centerOnPlayerBase() {
   const rect = canvas.getBoundingClientRect();
   const cap = CITIES.find(c => c.type === 'capital' && c.owner === state.faction);
   if (!cap) return;
-  camera.x = cap.x * MAP.TILE - rect.width / 2;
-  camera.y = cap.y * MAP.TILE - rect.height / 2;
+
+  const worldCx = cap.x * MAP.TILE + MAP.TILE / 2;
+  const worldCy = cap.y * MAP.TILE + MAP.TILE / 2;
+  const viewW = rect.width / camera.zoom;
+  const viewH = rect.height / camera.zoom;
+
+  camera.x = worldCx - viewW / 2;
+  camera.y = worldCy - viewH / 2;
   clampCamera();
 }
 
@@ -376,10 +438,20 @@ function clampCamera() {
   const rect = canvas.getBoundingClientRect();
   const worldW = MAP.W * MAP.TILE;
   const worldH = MAP.H * MAP.TILE;
-  camera.x = Math.max(0, Math.min(worldW - rect.width, camera.x));
-  camera.y = Math.max(0, Math.min(worldH - rect.height, camera.y));
-  if (worldW < rect.width) camera.x = (worldW - rect.width) / 2;
-  if (worldH < rect.height) camera.y = (worldH - rect.height) / 2;
+  const viewW = rect.width / camera.zoom;
+  const viewH = rect.height / camera.zoom;
+
+  if (worldW <= viewW) {
+    camera.x = (worldW - viewW) / 2;
+  } else {
+    camera.x = Math.max(0, Math.min(worldW - viewW, camera.x));
+  }
+
+  if (worldH <= viewH) {
+    camera.y = (worldH - viewH) / 2;
+  } else {
+    camera.y = Math.max(0, Math.min(worldH - viewH, camera.y));
+  }
 }
 
 // ============ УПРАВЛЕНИЕ КАМЕРОЙ ============
@@ -399,8 +471,8 @@ function initCameraControls() {
     const dx = e.clientX - camera.dragStartX;
     const dy = e.clientY - camera.dragStartY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) camera.moved = true;
-    camera.x = camera.cameraStartX - dx;
-    camera.y = camera.cameraStartY - dy;
+    camera.x = camera.cameraStartX - dx / camera.zoom;
+    camera.y = camera.cameraStartY - dy / camera.zoom;
     clampCamera();
   });
 
@@ -411,46 +483,119 @@ function initCameraControls() {
     camera.dragging = false;
   });
 
+  // Зум колёсиком
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoomAt(e.clientX, e.clientY, factor);
+  }, { passive: false });
+
   // Тач
   canvas.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
-    const t = e.touches[0];
-    camera.dragging = true;
-    camera.moved = false;
-    camera.dragStartX = t.clientX;
-    camera.dragStartY = t.clientY;
-    camera.cameraStartX = camera.x;
-    camera.cameraStartY = camera.y;
-  }, { passive: true });
+    e.preventDefault();
+
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      camera.dragging = true;
+      camera.moved = false;
+      camera.dragStartX = t.clientX;
+      camera.dragStartY = t.clientY;
+      camera.cameraStartX = camera.x;
+      camera.cameraStartY = camera.y;
+    } else if (e.touches.length === 2) {
+      camera.dragging = false;
+      camera.pinching = true;
+
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      camera.pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      camera.pinchStartZoom = camera.zoom;
+
+      const rect = canvas.getBoundingClientRect();
+      camera.pinchCenterX = (t1.clientX + t2.clientX) / 2 - rect.left;
+      camera.pinchCenterY = (t1.clientY + t2.clientY) / 2 - rect.top;
+    }
+  }, { passive: false });
 
   canvas.addEventListener('touchmove', e => {
-    if (!camera.dragging || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - camera.dragStartX;
-    const dy = t.clientY - camera.dragStartY;
-    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) camera.moved = true;
-    camera.x = camera.cameraStartX - dx;
-    camera.y = camera.cameraStartY - dy;
-    clampCamera();
-  }, { passive: true });
+    e.preventDefault();
+
+    if (camera.dragging && e.touches.length === 1) {
+      const t = e.touches[0];
+      const dx = t.clientX - camera.dragStartX;
+      const dy = t.clientY - camera.dragStartY;
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) camera.moved = true;
+      camera.x = camera.cameraStartX - dx / camera.zoom;
+      camera.y = camera.cameraStartY - dy / camera.zoom;
+      clampCamera();
+    } else if (camera.pinching && e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+      const factor = dist / camera.pinchStartDist;
+      const newZoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.pinchStartZoom * factor));
+      applyZoomAt(camera.pinchCenterX, camera.pinchCenterY, newZoom);
+    }
+  }, { passive: false });
 
   canvas.addEventListener('touchend', e => {
-    if (camera.dragging && !camera.moved && e.changedTouches[0]) {
+    e.preventDefault();
+
+    if (camera.pinching && e.touches.length < 2) {
+      camera.pinching = false;
+    }
+
+    if (camera.dragging && !camera.moved && e.changedTouches[0] && e.touches.length === 0) {
       const t = e.changedTouches[0];
       handleCanvasClick(t.clientX, t.clientY);
     }
-    camera.dragging = false;
-  });
+
+    if (e.touches.length === 0) {
+      camera.dragging = false;
+    }
+  }, { passive: false });
+}
+
+function zoomAt(clientX, clientY, factor) {
+  const rect = canvas.getBoundingClientRect();
+  const localX = clientX - rect.left;
+  const localY = clientY - rect.top;
+  const newZoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.zoom * factor));
+  applyZoomAt(localX, localY, newZoom);
+}
+
+function applyZoomAt(localX, localY, newZoom) {
+  const worldX = localX / camera.zoom + camera.x;
+  const worldY = localY / camera.zoom + camera.y;
+
+  camera.zoom = newZoom;
+
+  camera.x = worldX - localX / camera.zoom;
+  camera.y = worldY - localY / camera.zoom;
+
+  clampCamera();
+}
+
+function zoomByCenter(factor) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  const newZoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.zoom * factor));
+  applyZoomAt(cx, cy, newZoom);
 }
 
 // ============ КЛИК ПО КАРТЕ ============
 function handleCanvasClick(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const localX = clientX - rect.left + camera.x;
-  const localY = clientY - rect.top + camera.y;
+  const localX = clientX - rect.left;
+  const localY = clientY - rect.top;
 
-  const tileX = Math.floor(localX / MAP.TILE);
-  const tileY = Math.floor(localY / MAP.TILE);
+  const worldX = localX / camera.zoom + camera.x;
+  const worldY = localY / camera.zoom + camera.y;
+
+  const tileX = Math.floor(worldX / MAP.TILE);
+  const tileY = Math.floor(worldY / MAP.TILE);
 
   const city = CITIES.find(c => c.x === tileX && c.y === tileY);
   if (city) {
@@ -485,11 +630,7 @@ function openCityPanel(city) {
   document.getElementById('city-income').textContent = '+' + income.toFixed(2) + '/с';
 
   const attackBtn = document.getElementById('city-attack-btn');
-  if (city.owner === state.faction && city.garrison > 0) {
-    attackBtn.disabled = false;
-  } else {
-    attackBtn.disabled = true;
-  }
+  attackBtn.disabled = !(city.owner === state.faction && city.garrison > 0);
 }
 
 function closeCityPanel() {
@@ -499,7 +640,7 @@ function closeCityPanel() {
 
 document.getElementById('city-panel-close').addEventListener('click', closeCityPanel);
 
-// ============ ПАНЕЛЬ ЦЕЛЕЙ НАСТУПЛЕНИЯ ============
+// ============ ПАНЕЛЬ ЦЕЛЕЙ ============
 function openAttackTargetPanel() {
   if (!selectedCity) return;
   const dict = LANG[state.settings.language];
@@ -602,10 +743,10 @@ function loop(now) {
 
   if (state.gameOver && !state.gameOverShown) {
     state.gameOverShown = true;
-    const dict = LANG[state.settings.language];
     document.getElementById('gameover-title').textContent =
-      state.gameOverReason === 'victory' ? '🏆 ' + (state.settings.language === 'ru' ? 'Победа' : 'Victory')
-      : state.settings.language === 'ru' ? '💀 Поражение' : '💀 Defeat';
+      state.gameOverReason === 'victory'
+        ? (state.settings.language === 'ru' ? '🏆 Победа' : '🏆 Victory')
+        : (state.settings.language === 'ru' ? '💀 Поражение' : '💀 Defeat');
     document.getElementById('gameover-text').textContent = state.gameOverText || '';
     document.getElementById('gameover-modal').classList.remove('hidden');
   }
@@ -648,7 +789,7 @@ function update(dt) {
   if (state.satisfaction <= 0) {
     state.gameOver = true;
     state.gameOverReason = 'defeat';
-    state.gameOverText = 'Переворот. Вы свергнуты.';
+    state.gameOverText = state.settings.language === 'ru' ? 'Переворот. Вы свергнуты.' : 'Coup. You are overthrown.';
     return;
   }
   if (state.satisfaction < BALANCE.coupWarningThreshold) {
@@ -656,7 +797,7 @@ function update(dt) {
     else if ((state.coupTimer -= dt) <= 0) {
       state.gameOver = true;
       state.gameOverReason = 'defeat';
-      state.gameOverText = 'Переворот. Вы свергнуты.';
+      state.gameOverText = state.settings.language === 'ru' ? 'Переворот. Вы свергнуты.' : 'Coup. You are overthrown.';
     }
   } else state.coupTimer = null;
 
@@ -708,7 +849,83 @@ function updateHUD() {
 }
 
 // ============ РЕНДЕР ============
+function renderTile(x, y, sx, sy, size) {
+  const t = map[y][x];
+  const noise = getTileNoise(x, y);
+
+  if (t === TILE.GROUND) {
+    const base = 26 + noise * 8;
+    ctx.fillStyle = `rgb(${base}, ${base + 8}, ${base + 18})`;
+    ctx.fillRect(sx, sy, size, size);
+    if (noise > 0.7 && size > 12) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.fillRect(sx + noise * size * 0.5, sy + (1 - noise) * size * 0.5, size * 0.05, size * 0.05);
+    }
+  } else if (t === TILE.GRASS) {
+    const g = 30 + noise * 15;
+    ctx.fillStyle = `rgb(${20 + noise * 10}, ${g}, ${20 + noise * 5})`;
+    ctx.fillRect(sx, sy, size, size);
+    if (size > 20) {
+      ctx.strokeStyle = 'rgba(60, 120, 60, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx + size * 0.2, sy + size - 4);
+      ctx.lineTo(sx + size * 0.2 + noise * 4 - 2, sy + size * 0.2);
+      ctx.moveTo(sx + size * 0.8, sy + size - 4);
+      ctx.lineTo(sx + size * 0.8 + (1 - noise) * 4 - 2, sy + size * 0.25);
+      ctx.stroke();
+    }
+  } else if (t === TILE.MOUNTAIN) {
+    const g = 50 + noise * 20;
+    ctx.fillStyle = `rgb(${g}, ${g - 10}, ${g - 15})`;
+    ctx.fillRect(sx, sy, size, size);
+
+    if (size > 15) {
+      ctx.fillStyle = `rgba(30, 25, 22, 0.6)`;
+      ctx.beginPath();
+      ctx.moveTo(sx + size * 0.5, sy + size * 0.15);
+      ctx.lineTo(sx + size * 0.15, sy + size - size * 0.1);
+      ctx.lineTo(sx + size * 0.85, sy + size - size * 0.1);
+      ctx.closePath();
+      ctx.fill();
+
+      if (noise > 0.6 && size > 25) {
+        ctx.fillStyle = 'rgba(220, 220, 220, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(sx + size * 0.5, sy + size * 0.15);
+        ctx.lineTo(sx + size * 0.4, sy + size * 0.35);
+        ctx.lineTo(sx + size * 0.6, sy + size * 0.35);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  } else if (t === TILE.WATER) {
+    const b = 60 + noise * 20;
+    ctx.fillStyle = `rgb(10, ${b * 0.6}, ${b})`;
+    ctx.fillRect(sx, sy, size, size);
+
+    if (size > 15) {
+      ctx.strokeStyle = 'rgba(100, 180, 220, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < 2; i++) {
+        const wy = sy + size * 0.3 + i * size * 0.35;
+        ctx.moveTo(sx + size * 0.15, wy);
+        ctx.quadraticCurveTo(sx + size * 0.5, wy - 2, sx + size * 0.85, wy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  if (size > 12) {
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 0.5, sy + 0.5, size - 1, size - 1);
+  }
+}
+
 function renderMap() {
+  if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
   const w = rect.width;
   const h = rect.height;
@@ -716,85 +933,51 @@ function renderMap() {
   ctx.fillStyle = '#060913';
   ctx.fillRect(0, 0, w, h);
 
+  const tileSize = screenTileSize();
+
   const x0 = Math.max(0, Math.floor(camera.x / MAP.TILE));
   const y0 = Math.max(0, Math.floor(camera.y / MAP.TILE));
-  const x1 = Math.min(MAP.W - 1, Math.ceil((camera.x + w) / MAP.TILE));
-  const y1 = Math.min(MAP.H - 1, Math.ceil((camera.y + h) / MAP.TILE));
+  const x1 = Math.min(MAP.W - 1, Math.ceil((camera.x + w / camera.zoom) / MAP.TILE));
+  const y1 = Math.min(MAP.H - 1, Math.ceil((camera.y + h / camera.zoom) / MAP.TILE));
 
-  // Тайлы
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
-      const t = map[y][x];
-      const sx = x * MAP.TILE - camera.x;
-      const sy = y * MAP.TILE - camera.y;
-
-      ctx.fillStyle = TILE_COLORS[t];
-      ctx.fillRect(sx, sy, MAP.TILE, MAP.TILE);
-
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, MAP.TILE - 1, MAP.TILE - 1);
+      const sx = (x * MAP.TILE - camera.x) * camera.zoom;
+      const sy = (y * MAP.TILE - camera.y) * camera.zoom;
+      renderTile(x, y, sx, sy, tileSize);
     }
   }
 
-  // Дороги
   renderRoads();
-
-  // Активные наступления
   renderAttacks();
-
-  // Города
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  CITIES.forEach(c => {
-    if (c.x < x0 - 1 || c.x > x1 + 1 || c.y < y0 - 1 || c.y > y1 + 1) return;
-    const sx = c.x * MAP.TILE - camera.x;
-    const sy = c.y * MAP.TILE - camera.y;
-    const color = CITY_COLORS[c.owner];
-    const size = c.type === 'capital' ? 0.75 : c.type === 'large' ? 0.55 : c.type === 'medium' ? 0.45 : 0.35;
-
-    ctx.shadowColor = color;
-    ctx.shadowBlur = c.type === 'capital' ? 16 : 8;
-
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(sx + MAP.TILE / 2, sy + MAP.TILE / 2, MAP.TILE * size / 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    if (c.type === 'capital') {
-      ctx.font = `${MAP.TILE * 0.55}px sans-serif`;
-      ctx.fillText('🏠', sx + MAP.TILE / 2, sy + MAP.TILE / 2 + 2);
-    }
-  });
+  renderCities();
 }
 
 function renderRoads() {
   const rect = canvas.getBoundingClientRect();
+  const tileSize = screenTileSize();
 
   ROADS.forEach(road => {
     const a = road.from, b = road.to;
 
-    const minX = Math.min(a.x, b.x) * MAP.TILE - camera.x;
-    const maxX = Math.max(a.x, b.x) * MAP.TILE - camera.x;
-    const minY = Math.min(a.y, b.y) * MAP.TILE - camera.y;
-    const maxY = Math.max(a.y, b.y) * MAP.TILE - camera.y;
+    const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+    const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
 
-    if (maxX < 0 || minX > rect.width || maxY < 0 || minY > rect.height) return;
-
-    const x1 = a.x * MAP.TILE - camera.x + MAP.TILE / 2;
-    const y1 = a.y * MAP.TILE - camera.y + MAP.TILE / 2;
-    const x2 = b.x * MAP.TILE - camera.x + MAP.TILE / 2;
-    const y2 = b.y * MAP.TILE - camera.y + MAP.TILE / 2;
+    if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
+        Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
 
     const color = road.type === 'own' ? '#00d4ff'
                 : road.type === 'enemy' ? '#ff3b5c'
                 : '#facc15';
 
+    const lineWidth = Math.max(1, 1.5 * camera.zoom);
+    const dash = Math.max(3, 5 * camera.zoom);
+
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = lineWidth;
+    ctx.setLineDash([dash, dash]);
     ctx.globalAlpha = 0.4;
 
     ctx.beginPath();
@@ -808,44 +991,103 @@ function renderRoads() {
 }
 
 function renderAttacks() {
+  const tileSize = screenTileSize();
+
   ACTIVE_ATTACKS.forEach(atk => {
     const a = atk.from, b = atk.to;
 
-    const x1 = a.x * MAP.TILE - camera.x + MAP.TILE / 2;
-    const y1 = a.y * MAP.TILE - camera.y + MAP.TILE / 2;
-    const x2 = b.x * MAP.TILE - camera.x + MAP.TILE / 2;
-    const y2 = b.y * MAP.TILE - camera.y + MAP.TILE / 2;
+    const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+    const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
 
     const cx = x1 + (x2 - x1) * atk.progress;
     const cy = y1 + (y2 - y1) * atk.progress;
 
-    // Полная линия
     ctx.strokeStyle = '#00ff88';
     ctx.globalAlpha = 0.3;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
 
-    // Пройденная часть
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#00ff88';
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 14;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(cx, cy);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Точка
     const pulse = 1 + Math.sin(performance.now() / 200) * 0.3;
     ctx.fillStyle = '#00ff88';
     ctx.beginPath();
-    ctx.arc(cx, cy, 6 * pulse, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 6 * camera.zoom * pulse, 0, Math.PI * 2);
     ctx.fill();
+  });
+}
+
+function renderCities() {
+  const tileSize = screenTileSize();
+  const rect = canvas.getBoundingClientRect();
+
+  const x0 = Math.max(0, Math.floor(camera.x / MAP.TILE) - 1);
+  const y0 = Math.max(0, Math.floor(camera.y / MAP.TILE) - 1);
+  const x1 = Math.min(MAP.W, Math.ceil((camera.x + rect.width / camera.zoom) / MAP.TILE) + 1);
+  const y1 = Math.min(MAP.H, Math.ceil((camera.y + rect.height / camera.zoom) / MAP.TILE) + 1);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  CITIES.forEach(c => {
+    if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) return;
+
+    const sx = (c.x * MAP.TILE - camera.x) * camera.zoom;
+    const sy = (c.y * MAP.TILE - camera.y) * camera.zoom;
+    const color = CITY_COLORS[c.owner];
+
+    const sizeRatio = c.type === 'capital' ? 0.75
+                    : c.type === 'large' ? 0.55
+                    : c.type === 'medium' ? 0.45
+                    : 0.35;
+    const radius = tileSize * sizeRatio / 2;
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = c.type === 'capital' ? 16 : 8;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (c.type === 'capital' && tileSize > 20) {
+      ctx.font = `${tileSize * 0.55}px sans-serif`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏠', sx + tileSize / 2, sy + tileSize / 2 + 2);
+    }
+
+    if (camera.zoom < 0.7 && c.type !== 'capital' && c.type !== 'large') return;
+
+    ctx.textBaseline = 'top';
+
+    const fontSize = Math.max(8,
+      (c.type === 'capital' ? 12 : c.type === 'large' ? 11 : c.type === 'medium' ? 10 : 9) * camera.zoom
+    );
+    ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+
+    const textY = sy + tileSize + 2;
+    const textX = sx + tileSize / 2;
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
+    ctx.strokeText(c.name, textX, textY);
+
+    ctx.fillStyle = color;
+    ctx.fillText(c.name, textX, textY);
   });
 }
 
@@ -863,12 +1105,17 @@ function startGame() {
   state.money *= d.playerMoneyMult;
   state.satisfaction -= d.playerSatPenalty;
 
+  // Блокировка сворачивания
+  if (tg) {
+    if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+    if (tg.disableSwipes) tg.disableSwipes();
+  }
+
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
 
   document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
 
-  // Генерация мира
   seed = 12345;
   generateMap();
   generateCities();
@@ -900,6 +1147,13 @@ document.getElementById('pause-btn').addEventListener('click', e => {
   e.target.classList.toggle('paused', state.paused);
 });
 
+document.getElementById('zoom-in').addEventListener('click', () => zoomByCenter(1.25));
+document.getElementById('zoom-out').addEventListener('click', () => zoomByCenter(1 / 1.25));
+
+document.getElementById('city-list-btn').addEventListener('click', () => {
+  centerOnPlayerBase();
+});
+
 document.getElementById('gameover-restart').addEventListener('click', () => {
   state.gameOver = false;
   state.gameOverShown = false;
@@ -908,9 +1162,4 @@ document.getElementById('gameover-restart').addEventListener('click', () => {
   document.getElementById('gameover-modal').classList.add('hidden');
   document.getElementById('game-screen').classList.add('hidden');
   document.getElementById('menu').classList.remove('hidden');
-});
-
-// Кнопка "список городов" — центрирует камеру на столице
-document.getElementById('city-list-btn').addEventListener('click', () => {
-  centerOnPlayerBase();
 });
