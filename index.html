@@ -11,31 +11,21 @@
   <!-- ===== МЕНЮ ===== -->
   <div id="menu" class="screen">
     <div class="menu-container">
-
-      <!-- Заголовок -->
       <div class="header">
         <h1 class="game-title" data-i18n="gameTitle">ЛИТИЙНАЯ ДУГА</h1>
         <p class="game-subtitle" data-i18n="gameSubtitle">Стратегия в реальном времени за ресурс будущего</p>
       </div>
 
-      <!-- Язык -->
       <div class="menu-section">
-        <div class="section-label">
-          <span class="dot"></span>
-          <span data-i18n="language">ЯЗЫК · LANGUAGE</span>
-        </div>
+        <div class="section-label"><span class="dot"></span><span data-i18n="language">ЯЗЫК · LANGUAGE</span></div>
         <div class="row">
           <button class="opt-btn lang-btn selected" data-lang="ru">Русский</button>
           <button class="opt-btn lang-btn" data-lang="en">English</button>
         </div>
       </div>
 
-      <!-- Сторона -->
       <div class="menu-section">
-        <div class="section-label">
-          <span class="dot"></span>
-          <span data-i18n="faction">СТОРОНА</span>
-        </div>
+        <div class="section-label"><span class="dot"></span><span data-i18n="faction">СТОРОНА</span></div>
         <div class="row faction-row">
           <div class="faction-card" data-faction="aurora">
             <div class="faction-name" data-i18n="auroraName">Республика Аврора</div>
@@ -46,12 +36,8 @@
         </div>
       </div>
 
-      <!-- Сложность -->
       <div class="menu-section">
-        <div class="section-label">
-          <span class="dot"></span>
-          <span data-i18n="difficulty">СЛОЖНОСТЬ</span>
-        </div>
+        <div class="section-label"><span class="dot"></span><span data-i18n="difficulty">СЛОЖНОСТЬ</span></div>
         <div class="row">
           <button class="opt-btn diff-btn" data-diff="easy" data-i18n="easy">Легко</button>
           <button class="opt-btn diff-btn selected" data-diff="normal" data-i18n="normal">Норма</button>
@@ -61,7 +47,6 @@
         <div id="difficulty-desc" class="difficulty-desc"></div>
       </div>
 
-      <!-- Старт -->
       <button id="start-btn" disabled>
         <span data-i18n="startGame">НАЧАТЬ ИГРУ</span>
       </button>
@@ -79,30 +64,59 @@
             <span class="sub" id="income">+0.0/с</span>
           </div>
         </div>
-        <div class="stat">
-          <span class="icon">👥</span>
-          <span class="value" id="population">0</span>
-        </div>
-        <div class="stat">
-          <span class="icon">😊</span>
-          <span class="value" id="satisfaction">0%</span>
-        </div>
-        <div class="stat">
-          <span class="icon">🕳️</span>
-          <span class="value" id="corruption">0%</span>
-        </div>
+        <div class="stat"><span class="icon">👥</span><span class="value" id="population">0</span></div>
+        <div class="stat"><span class="icon">😊</span><span class="value" id="satisfaction">0%</span></div>
+        <div class="stat"><span class="icon">🕳️</span><span class="value" id="corruption">0%</span></div>
       </div>
-
       <div class="hud-row controls-row">
         <div class="speed-group">
           <button class="speed-btn" data-speed="1">×1</button>
           <button class="speed-btn" data-speed="2">×2</button>
           <button class="speed-btn" data-speed="4">×4</button>
         </div>
-        <button id="pause-btn">⏸</button>
+        <div class="speed-group">
+          <button class="city-btn" id="city-list-btn">🏙️</button>
+          <button id="pause-btn">⏸</button>
+        </div>
       </div>
     </div>
     <canvas id="game"></canvas>
+
+    <!-- Панель выбранного города -->
+    <div id="city-panel" class="city-panel hidden">
+      <div class="city-panel-header">
+        <span id="city-panel-name">Город</span>
+        <button id="city-panel-close">✕</button>
+      </div>
+      <div class="city-panel-body">
+        <div class="city-stat"><span>Владелец:</span><span id="city-owner">—</span></div>
+        <div class="city-stat"><span>Тип:</span><span id="city-type">—</span></div>
+        <div class="city-stat"><span>Гарнизон:</span><span id="city-garrison">0</span></div>
+        <div class="city-stat"><span>Инфраструктура:</span><span id="city-infra">0%</span></div>
+        <div class="city-stat"><span>Доход:</span><span id="city-income">+0.0/с</span></div>
+      </div>
+      <div class="city-panel-actions">
+        <button id="city-attack-btn" class="action-btn">⚔️ Наступление</button>
+      </div>
+    </div>
+
+    <!-- Панель выбора цели наступления -->
+    <div id="attack-target-panel" class="city-panel hidden">
+      <div class="city-panel-header">
+        <span data-i18n="chooseTarget">Выберите цель</span>
+        <button id="attack-target-close">✕</button>
+      </div>
+      <div class="city-panel-body" id="attack-targets"></div>
+    </div>
+
+    <!-- Модалка Game Over -->
+    <div id="gameover-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="gameover-title">Игра окончена</h2>
+        <p id="gameover-text"></p>
+        <button id="gameover-restart" data-i18n="backToMenu">В меню</button>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>
