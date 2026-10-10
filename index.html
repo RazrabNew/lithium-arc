@@ -30,22 +30,10 @@
           <div class="faction-card" data-faction="aurora">
             <div class="faction-flag">🟦</div>
             <div class="faction-name" data-i18n="auroraName">Республика Аврора</div>
-            <ul class="faction-traits">
-              <li>🏛️ <span data-i18n="democracy">Демократия</span></li>
-              <li>💰 <span data-i18n="weakEcon">Слабая экономика</span></li>
-              <li>😊 <span data-i18n="freeSociety">Свободное общество</span></li>
-              <li>⚔️ <span data-i18n="qualityArmy">Качественная армия</span></li>
-            </ul>
           </div>
           <div class="faction-card" data-faction="vesper">
             <div class="faction-flag">🟥</div>
             <div class="faction-name" data-i18n="vesperName">Доминион Веспер</div>
-            <ul class="faction-traits">
-              <li>👑 <span data-i18n="autocracy">Автократия</span></li>
-              <li>💰 <span data-i18n="richEcon">Богатая экономика</span></li>
-              <li>😐 <span data-i18n="scaredSociety">Запуганное общество</span></li>
-              <li>⚔️ <span data-i18n="massArmy">Массовая армия</span></li>
-            </ul>
           </div>
         </div>
       </div>
@@ -59,6 +47,7 @@
           <button class="opt-btn diff-btn" data-diff="hard">🔴 <span data-i18n="hard">Сложно</span></button>
           <button class="opt-btn diff-btn" data-diff="insane">💀 <span data-i18n="insane">Хардкор</span></button>
         </div>
+        <div id="difficulty-desc" class="difficulty-desc"></div>
       </div>
 
       <!-- Старт -->
@@ -71,38 +60,34 @@
   <!-- ===== ИГРА ===== -->
   <div id="game-screen" class="screen hidden">
     <div id="hud">
-      <div class="stat">
-        <span class="icon">💰</span>
-        <div class="stat-body">
-          <span class="value" id="money">0</span>
-          <span class="sub" id="income">+0.0/с</span>
+      <div class="hud-row resources">
+        <div class="stat">
+          <span class="icon">💰</span>
+          <div class="stat-body">
+            <span class="value" id="money">0</span>
+            <span class="sub" id="income">+0.0/с</span>
+          </div>
         </div>
-      </div>
-      <div class="stat">
-        <span class="icon">👥</span>
-        <div class="stat-body">
+        <div class="stat">
+          <span class="icon">👥</span>
           <span class="value" id="population">0</span>
-          <span class="sub" data-i18n="population">население</span>
         </div>
-      </div>
-      <div class="stat">
-        <span class="icon">😊</span>
-        <div class="stat-body">
+        <div class="stat">
+          <span class="icon">😊</span>
           <span class="value" id="satisfaction">0%</span>
-          <span class="sub" data-i18n="satisfaction">довольность</span>
         </div>
-      </div>
-      <div class="stat">
-        <span class="icon">🕳️</span>
-        <div class="stat-body">
+        <div class="stat">
+          <span class="icon">🕳️</span>
           <span class="value" id="corruption">0%</span>
-          <span class="sub" data-i18n="corruption">коррупция</span>
         </div>
       </div>
-      <div class="controls">
-        <button class="speed-btn" data-speed="1">×1</button>
-        <button class="speed-btn" data-speed="2">×2</button>
-        <button class="speed-btn" data-speed="4">×4</button>
+
+      <div class="hud-row controls-row">
+        <div class="speed-group">
+          <button class="speed-btn" data-speed="1">×1</button>
+          <button class="speed-btn" data-speed="2">×2</button>
+          <button class="speed-btn" data-speed="4">×4</button>
+        </div>
         <button id="pause-btn">⏸</button>
       </div>
     </div>

@@ -38,23 +38,35 @@ const LANG = {
     language: 'Язык', faction: 'Сторона', difficulty: 'Сложность',
     startGame: 'Начать игру',
     auroraName: 'Республика Аврора', vesperName: 'Доминион Веспер',
-    democracy: 'Демократия', autocracy: 'Автократия',
-    weakEcon: 'Слабая экономика', richEcon: 'Богатая экономика',
-    freeSociety: 'Свободное общество', scaredSociety: 'Запуганное общество',
-    qualityArmy: 'Качественная армия', massArmy: 'Массовая армия',
     easy: 'Легко', normal: 'Норма', hard: 'Сложно', insane: 'Хардкор',
     population: 'население', satisfaction: 'довольность', corruption: 'коррупция',
+
+    diffEasy: 'Спокойное знакомство. ИИ медлит, у вас запас ресурсов.',
+    diffNormal: 'Сбалансированная игра. ИИ действует адекватно.',
+    diffHard: 'ИИ агрессивнее и богаче. У вас меньше денег.',
+    diffInsane: 'Максимальное давление. ИИ доминирует, вы начинаете в кризисе.',
+
+    aiIncome: 'Доход ИИ',
+    aiUnits: 'Сила юнитов ИИ',
+    playerMoney: 'Ваши деньги',
+    playerSat: 'Старт. довольность',
   },
   en: {
     language: 'Language', faction: 'Faction', difficulty: 'Difficulty',
     startGame: 'Start game',
     auroraName: 'Aurora Republic', vesperName: 'Vesper Dominion',
-    democracy: 'Democracy', autocracy: 'Autocracy',
-    weakEcon: 'Weak economy', richEcon: 'Rich economy',
-    freeSociety: 'Free society', scaredSociety: 'Fearful society',
-    qualityArmy: 'Quality army', massArmy: 'Mass army',
     easy: 'Easy', normal: 'Normal', hard: 'Hard', insane: 'Insane',
     population: 'population', satisfaction: 'satisfaction', corruption: 'corruption',
+
+    diffEasy: 'A calm introduction. AI is slow, you have resource surplus.',
+    diffNormal: 'Balanced game. AI acts reasonably.',
+    diffHard: 'AI is more aggressive and richer. You have less money.',
+    diffInsane: 'Maximum pressure. AI dominates, you start in crisis.',
+
+    aiIncome: 'AI income',
+    aiUnits: 'AI unit power',
+    playerMoney: 'Your money',
+    playerSat: 'Start satisfaction',
   },
 };
 
@@ -83,6 +95,11 @@ function applyLanguage(lang) {
     if (dict[key]) el.textContent = dict[key];
   });
   localStorage.setItem('lang', lang);
+
+  // Обновить описание сложности на новом языке
+  if (state.settings.difficulty) {
+    updateDifficultyDesc(state.settings.difficulty);
+  }
 }
 
 function selectFaction(faction) {
@@ -98,7 +115,30 @@ function selectDifficulty(diff) {
   document.querySelectorAll('.diff-btn').forEach(b =>
     b.classList.toggle('selected', b.dataset.diff === diff)
   );
+  updateDifficultyDesc(diff);
   checkReady();
+}
+
+function updateDifficultyDesc(diff) {
+  const dict = LANG[state.settings.language];
+  const d = DIFFICULTY[diff];
+  const el = document.getElementById('difficulty-desc');
+  el.dataset.diff = diff;
+
+  const pct = (mult) => {
+    const val = Math.round((mult - 1) * 100);
+    return (val > 0 ? '+' : '') + val + '%';
+  };
+
+  const cap = diff.charAt(0).toUpperCase() + diff.slice(1);
+
+  el.innerHTML = `
+    <div style="margin-bottom:6px;color:#cbd5e1">${dict['diff' + cap]}</div>
+    <div class="row-desc"><span>${dict.aiIncome}</span><span>${pct(d.aiIncomeMult)}</span></div>
+    <div class="row-desc"><span>${dict.aiUnits}</span><span>${pct(d.aiUnitMult)}</span></div>
+    <div class="row-desc"><span>${dict.playerMoney}</span><span>${pct(d.playerMoneyMult)}</span></div>
+    <div class="row-desc"><span>${dict.playerSat}</span><span>${d.playerSatPenalty > 0 ? '−' + d.playerSatPenalty + '%' : '—'}</span></div>
+  `;
 }
 
 function checkReady() {
@@ -135,6 +175,9 @@ document.getElementById('start-btn').addEventListener('click', startGame);
     b.classList.toggle('selected', b.dataset.lang === lang);
   });
   applyLanguage(lang);
+
+  // Показать описание дефолтной сложности
+  updateDifficultyDesc(state.settings.difficulty);
 })();
 
 // ============ СТАРТ ИГРЫ ============
