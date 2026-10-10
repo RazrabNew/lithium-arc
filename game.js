@@ -83,7 +83,6 @@ let map = [];
 let CITIES = [];
 let ROADS = [];
 let ACTIVE_ATTACKS = [];
-let RIVER_POINTS = [];
 
 let seed = 12345;
 function rand() {
@@ -193,7 +192,7 @@ document.getElementById('start-btn').addEventListener('click', startGame);
   updateDifficultyDesc(state.settings.difficulty);
 })();
 
-// ============ ГЕНЕРАЦИЯ КАРТЫ (логика) ============
+// ============ ГЕНЕРАЦИЯ КАРТЫ ============
 function generateMap() {
   map = [];
   for (let y = 0; y < MAP.H; y++) {
@@ -334,141 +333,149 @@ function generateRoads() {
   });
 }
 
-// ============ ГЕНЕРАЦИЯ WORLD CANVAS (Voronoi + река) ============
+// ============ WORLD CANVAS (Voronoi через d3-delaunay) ============
 function generateWorldCanvas() {
   worldCanvas = document.createElement('canvas');
   worldCanvas.width = WORLD_W;
   worldCanvas.height = WORLD_H;
   worldCtx = worldCanvas.getContext('2d');
 
-  // 1. Базовый тёмный фон
-  worldCtx.fillStyle = '#1a1d24';
+  // 1. Тёмный фон
+  worldCtx.fillStyle = '#141820';
   worldCtx.fillRect(0, 0, WORLD_W, WORLD_H);
 
-  // 2. Регионы Voronoi (рисуем цветными пятнами с размытием)
-  drawRegions();
+  // 2. Voronoi-регионы
+  drawRegionsVoronoi();
 
-  // 3. Границы регионов (тёмные тонкие линии)
-  drawBorders();
-
-  // 4. Река
+  // 3. Река
   drawRiver();
 
-  // 5. Легкий шум/текстура
+  // 4. Легкая текстура
   drawTexture();
 }
 
-function drawRegions() {
-  const cities = CITIES.map(c => ({
-    x: c.x * MAP.TILE + MAP.TILE / 2,
-    y: c.y * MAP.TILE + MAP.TILE / 2,
-    owner: c.owner,
-  }));
+function drawRegionsVoronoi() {
+  // Точки = центры городов
+  const points = CITIES.map(c => [
+    c.x * MAP.TILE + MAP.TILE / 2,
+    c.y * MAP.TILE + MAP.TILE / 2,
+  ]);
 
-  const step = 3;
-  for (let py = 0; py < WORLD_H; py += step) {
-    for (let px = 0; px < WORLD_W; px += step) {
-      let minDist = Infinity;
-      let nearest = null;
-      for (const c of cities) {
-        const d = (c.x - px) ** 2 + (c.y - py) ** 2;
-        if (d < minDist) {
-          minDist = d;
-          nearest = c;
+  // Строим Voronoi через d3-delaunay
+  const delaunay = d3.Delaunay.from(points);
+  const voronoi = delaunay.voronoi([0, 0, WORLD_W, WORLD_H]);
+
+  // Рисуем каждый регион
+  CITIES.forEach((city, i) => {
+    const polygon = voronoi.cellPolygon(i);
+    if (!polygon) return;
+
+    const cx = city.x * MAP.TILE + MAP.TILE / 2;
+    const cy = city.y * MAP.TILE + MAP.TILE / 2;
+
+    // Цвет владельца
+    let centerColor, edgeColor;
+    if (city.owner === 'aurora') {
+      centerColor = 'rgba(0, 90, 130, 0.85)';
+      edgeColor = 'rgba(0, 40, 65, 0.85)';
+    } else if (city.owner === 'vesper') {
+      centerColor = 'rgba(130, 25, 50, 0.85)';
+      edgeColor = 'rgba(60, 10, 20, 0.85)';
+    } else {
+      centerColor = 'rgba(70, 75, 85, 0.85)';
+      edgeColor = 'rgba(35, 40, 48, 0.85)';
+    }
+
+    // Градиент от центра к краям
+    const grad = worldCtx.createRadialGradient(cx, cy, 0, cx, cy, 250);
+    grad.addColorStop(0, centerColor);
+    grad.addColorStop(1, edgeColor);
+
+    // Полигон
+    worldCtx.beginPath();
+    polygon.forEach(([x, y], j) => {
+      if (j === 0) worldCtx.moveTo(x, y);
+      else worldCtx.lineTo(x, y);
+    });
+    worldCtx.closePath();
+
+    worldCtx.fillStyle = grad;
+    worldCtx.fill();
+
+    // Границы — тёмная тонкая линия
+    worldCtx.strokeStyle = 'rgba(8, 10, 14, 0.95)';
+    worldCtx.lineWidth = 1.5;
+    worldCtx.stroke();
+  });
+
+  // Дополнительный слой — жирные границы между разными владельцами
+  drawFactionBorders(voronoi);
+}
+
+function drawFactionBorders(voronoi) {
+  // Пробегаем по всем рёбрам Voronoi
+  for (let i = 0; i < CITIES.length; i++) {
+    const neighborIter = voronoi.neighbors(i);
+    for (const j of neighborIter) {
+      if (i >= j) continue;
+      if (CITIES[i].owner === CITIES[j].owner) continue;
+
+      // Общая граница — рисуем жирнее
+      const cell1 = voronoi.cellPolygon(i);
+      const cell2 = voronoi.cellPolygon(j);
+      if (!cell1 || !cell2) continue;
+
+      // Находим общие точки
+      const shared = [];
+      cell1.forEach(p1 => {
+        cell2.forEach(p2 => {
+          if (Math.abs(p1[0] - p2[0]) < 0.5 && Math.abs(p1[1] - p2[1]) < 0.5) {
+            shared.push(p1);
+          }
+        });
+      });
+
+      if (shared.length >= 2) {
+        worldCtx.beginPath();
+        worldCtx.moveTo(shared[0][0], shared[0][1]);
+        for (let k = 1; k < shared.length; k++) {
+          worldCtx.lineTo(shared[k][0], shared[k][1]);
         }
+        worldCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+        worldCtx.lineWidth = 2.5;
+        worldCtx.stroke();
       }
-
-      let color;
-      if (nearest.owner === 'aurora') {
-        color = 'rgba(0, 50, 80, 0.55)';
-      } else if (nearest.owner === 'vesper') {
-        color = 'rgba(80, 15, 30, 0.55)';
-      } else {
-        color = 'rgba(40, 44, 52, 0.4)';
-      }
-
-      worldCtx.fillStyle = color;
-      worldCtx.fillRect(px, py, step, step);
     }
   }
 }
 
-function drawBorders() {
-  const cities = CITIES.map(c => ({
-    x: c.x * MAP.TILE + MAP.TILE / 2,
-    y: c.y * MAP.TILE + MAP.TILE / 2,
-    owner: c.owner,
-  }));
-
-  worldCtx.strokeStyle = 'rgba(10, 12, 16, 0.9)';
-  worldCtx.lineWidth = 1;
-  worldCtx.lineCap = 'round';
-
-  // Рисуем границы через соседей — линии между городами разных владельцев
-  const seen = new Set();
-  cities.forEach((a, i) => {
-    cities.forEach((b, j) => {
-      if (i >= j) return;
-      if (a.owner === b.owner) return;
-
-      const key = i + '-' + j;
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      if (dist > 300) return; // только близкие
-
-      // Середина — граница
-      const mx = (a.x + b.x) / 2;
-      const my = (a.y + b.y) / 2;
-
-      // Перпендикуляр
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const len = Math.hypot(dx, dy);
-      const nx = -dy / len;
-      const ny = dx / len;
-
-      // Рисуем линию длиной 60px
-      worldCtx.beginPath();
-      worldCtx.moveTo(mx - nx * 30, my - ny * 30);
-      worldCtx.lineTo(mx + nx * 30, my + ny * 30);
-      worldCtx.stroke();
-    });
-  });
-}
-
 function drawRiver() {
-  RIVER_POINTS = [];
   let px = WORLD_W * 0.45;
   let phase = 0;
 
-  worldCtx.strokeStyle = '#0f2233';
-  worldCtx.lineWidth = 8;
+  worldCtx.strokeStyle = '#0a1a28';
+  worldCtx.lineWidth = 10;
   worldCtx.lineCap = 'round';
   worldCtx.lineJoin = 'round';
   worldCtx.beginPath();
   worldCtx.moveTo(px, 0);
 
   for (let py = 0; py < WORLD_H; py += 8) {
-    phase += 0.15;
-    px += Math.sin(phase) * 12;
+    phase += 0.18;
+    px += Math.sin(phase) * 14;
     px = Math.max(WORLD_W * 0.35, Math.min(WORLD_W * 0.65, px));
     worldCtx.lineTo(px, py);
-    RIVER_POINTS.push({ x: px, y: py });
   }
   worldCtx.stroke();
 
-  // Светлая кромка
-  worldCtx.strokeStyle = '#1e4260';
-  worldCtx.lineWidth = 3;
+  worldCtx.strokeStyle = '#153a5a';
+  worldCtx.lineWidth = 4;
   worldCtx.stroke();
 }
 
 function drawTexture() {
-  // Простой шум — точки
-  worldCtx.fillStyle = 'rgba(255, 255, 255, 0.015)';
-  for (let i = 0; i < 800; i++) {
+  worldCtx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+  for (let i = 0; i < 600; i++) {
     const x = rand() * WORLD_W;
     const y = rand() * WORLD_H;
     worldCtx.fillRect(x, y, 2, 2);
@@ -648,7 +655,6 @@ function handleCanvasClick(clientX, clientY) {
   const worldX = localX / camera.zoom + camera.x;
   const worldY = localY / camera.zoom + camera.y;
 
-  // Ищем ближайший город в радиусе 30px
   let closest = null;
   let minDist = 30;
   CITIES.forEach(c => {
@@ -730,7 +736,7 @@ function closeCityPanel() {
 
 document.getElementById('city-panel-close').addEventListener('click', closeCityPanel);
 
-// ============ ПАНЕЛИ ============
+// ============ ПАНЕЛИ АТАК ============
 function openAttackTargetPanel() {
   if (!selectedCity) return;
   const dict = LANG[state.settings.language];
@@ -977,15 +983,10 @@ function renderMap() {
   ctx.fillStyle = '#0a0e1a';
   ctx.fillRect(0, 0, w, h);
 
-  // Копируем видимую часть worldCanvas
-  const srcX = camera.x;
-  const srcY = camera.y;
-  const srcW = w / camera.zoom;
-  const srcH = h / camera.zoom;
-
   ctx.drawImage(
     worldCanvas,
-    srcX, srcY, srcW, srcH,
+    camera.x, camera.y,
+    w / camera.zoom, h / camera.zoom,
     0, 0, w, h
   );
 
@@ -1009,9 +1010,9 @@ function renderRoads() {
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
 
-    const color = road.type === 'own'    ? 'rgba(0, 212, 255, 0.35)'
-                : road.type === 'enemy'  ? 'rgba(255, 59, 92, 0.35)'
-                : 'rgba(180, 190, 210, 0.3)';
+    const color = road.type === 'own'    ? 'rgba(0, 212, 255, 0.4)'
+                : road.type === 'enemy'  ? 'rgba(255, 59, 92, 0.4)'
+                : 'rgba(180, 190, 210, 0.35)';
 
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
@@ -1086,24 +1087,20 @@ function renderCities() {
                       : 0.13;
     const radius = Math.max(3, tileSize * radiusRatio);
 
-    // Свечение
     ctx.shadowColor = color;
     ctx.shadowBlur = c.type === 'capital' ? 24 : 12;
 
-    // Круг города
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Внутренняя точка
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.beginPath();
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
-    // Название
     if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
     const fontSize = Math.max(9,
@@ -1116,7 +1113,7 @@ function renderCities() {
     const textY = sy + tileSize / 2 + radius + 4;
 
     const textWidth = ctx.measureText(c.name).width;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(textX - textWidth / 2 - 3, textY - 1, textWidth + 6, fontSize + 2);
 
     ctx.fillStyle = color;
