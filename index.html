@@ -11,28 +11,36 @@
   <!-- ===== МЕНЮ ===== -->
   <div id="menu" class="screen">
     <div class="menu-container">
-      <h1 class="game-title">⚔️ ЛИТИЙНАЯ ДУГА</h1>
-      <p class="game-subtitle">RTS о борьбе за ресурс будущего</p>
+
+      <!-- Заголовок -->
+      <div class="header">
+        <h1 class="game-title" data-i18n="gameTitle">ЛИТИЙНАЯ ДУГА</h1>
+        <p class="game-subtitle" data-i18n="gameSubtitle">Стратегия в реальном времени за ресурс будущего</p>
+      </div>
 
       <!-- Язык -->
       <div class="menu-section">
-        <div class="section-label">🌍 <span data-i18n="language">Язык</span></div>
+        <div class="section-label">
+          <span class="dot"></span>
+          <span data-i18n="language">ЯЗЫК · LANGUAGE</span>
+        </div>
         <div class="row">
-          <button class="opt-btn lang-btn selected" data-lang="ru">🇷🇺 Русский</button>
-          <button class="opt-btn lang-btn" data-lang="en">🇬🇧 English</button>
+          <button class="opt-btn lang-btn selected" data-lang="ru">Русский</button>
+          <button class="opt-btn lang-btn" data-lang="en">English</button>
         </div>
       </div>
 
       <!-- Сторона -->
       <div class="menu-section">
-        <div class="section-label">⚔️ <span data-i18n="faction">Сторона</span></div>
-        <div class="faction-row">
+        <div class="section-label">
+          <span class="dot"></span>
+          <span data-i18n="faction">СТОРОНА</span>
+        </div>
+        <div class="row faction-row">
           <div class="faction-card" data-faction="aurora">
-            <div class="faction-flag">🟦</div>
             <div class="faction-name" data-i18n="auroraName">Республика Аврора</div>
           </div>
           <div class="faction-card" data-faction="vesper">
-            <div class="faction-flag">🟥</div>
             <div class="faction-name" data-i18n="vesperName">Доминион Веспер</div>
           </div>
         </div>
@@ -40,19 +48,22 @@
 
       <!-- Сложность -->
       <div class="menu-section">
-        <div class="section-label">🎚️ <span data-i18n="difficulty">Сложность</span></div>
+        <div class="section-label">
+          <span class="dot"></span>
+          <span data-i18n="difficulty">СЛОЖНОСТЬ</span>
+        </div>
         <div class="row">
-          <button class="opt-btn diff-btn" data-diff="easy">🟢 <span data-i18n="easy">Легко</span></button>
-          <button class="opt-btn diff-btn selected" data-diff="normal">🟡 <span data-i18n="normal">Норма</span></button>
-          <button class="opt-btn diff-btn" data-diff="hard">🔴 <span data-i18n="hard">Сложно</span></button>
-          <button class="opt-btn diff-btn" data-diff="insane">💀 <span data-i18n="insane">Хардкор</span></button>
+          <button class="opt-btn diff-btn" data-diff="easy" data-i18n="easy">Легко</button>
+          <button class="opt-btn diff-btn selected" data-diff="normal" data-i18n="normal">Норма</button>
+          <button class="opt-btn diff-btn" data-diff="hard" data-i18n="hard">Сложно</button>
+          <button class="opt-btn diff-btn" data-diff="insane" data-i18n="insane">Хардкор</button>
         </div>
         <div id="difficulty-desc" class="difficulty-desc"></div>
       </div>
 
       <!-- Старт -->
       <button id="start-btn" disabled>
-        ▶ <span data-i18n="startGame">Начать игру</span>
+        <span data-i18n="startGame">НАЧАТЬ ИГРУ</span>
       </button>
     </div>
   </div>

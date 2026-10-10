@@ -6,7 +6,7 @@ if (tg) { tg.ready(); tg.expand(); }
 const FACTIONS = {
   aurora: {
     name: 'Республика Аврора',
-    color: '#3b82f6',
+    color: '#00d4ff',
     start: { money: 100, satisfaction: 80, corruption: 20, population: 1000 },
     modifiers: {
       unitCostMult: 1.5, unitPowerMult: 1.4,
@@ -16,7 +16,7 @@ const FACTIONS = {
   },
   vesper: {
     name: 'Доминион Веспер',
-    color: '#dc2626',
+    color: '#ff3b5c',
     start: { money: 250, satisfaction: 60, corruption: 45, population: 1500 },
     modifiers: {
       unitCostMult: 0.7, unitPowerMult: 0.9,
@@ -35,11 +35,15 @@ const DIFFICULTY = {
 
 const LANG = {
   ru: {
-    language: 'Язык', faction: 'Сторона', difficulty: 'Сложность',
-    startGame: 'Начать игру',
-    auroraName: 'Республика Аврора', vesperName: 'Доминион Веспер',
+    gameTitle: 'ЛИТИЙНАЯ ДУГА',
+    gameSubtitle: 'Стратегия в реальном времени за ресурс будущего',
+    language: 'ЯЗЫК · LANGUAGE',
+    faction: 'СТОРОНА',
+    difficulty: 'СЛОЖНОСТЬ',
+    startGame: 'НАЧАТЬ ИГРУ',
+    auroraName: 'Республика Аврора',
+    vesperName: 'Доминион Веспер',
     easy: 'Легко', normal: 'Норма', hard: 'Сложно', insane: 'Хардкор',
-    population: 'население', satisfaction: 'довольность', corruption: 'коррупция',
 
     diffEasy: 'Спокойное знакомство. ИИ медлит, у вас запас ресурсов.',
     diffNormal: 'Сбалансированная игра. ИИ действует адекватно.',
@@ -52,11 +56,15 @@ const LANG = {
     playerSat: 'Старт. довольность',
   },
   en: {
-    language: 'Language', faction: 'Faction', difficulty: 'Difficulty',
-    startGame: 'Start game',
-    auroraName: 'Aurora Republic', vesperName: 'Vesper Dominion',
+    gameTitle: 'LITHIUM ARC',
+    gameSubtitle: 'Real-time strategy for the resource of the future',
+    language: 'LANGUAGE · ЯЗЫК',
+    faction: 'FACTION',
+    difficulty: 'DIFFICULTY',
+    startGame: 'START GAME',
+    auroraName: 'Aurora Republic',
+    vesperName: 'Vesper Dominion',
     easy: 'Easy', normal: 'Normal', hard: 'Hard', insane: 'Insane',
-    population: 'population', satisfaction: 'satisfaction', corruption: 'corruption',
 
     diffEasy: 'A calm introduction. AI is slow, you have resource surplus.',
     diffNormal: 'Balanced game. AI acts reasonably.',
@@ -96,7 +104,6 @@ function applyLanguage(lang) {
   });
   localStorage.setItem('lang', lang);
 
-  // Обновить описание сложности на новом языке
   if (state.settings.difficulty) {
     updateDifficultyDesc(state.settings.difficulty);
   }
@@ -133,7 +140,7 @@ function updateDifficultyDesc(diff) {
   const cap = diff.charAt(0).toUpperCase() + diff.slice(1);
 
   el.innerHTML = `
-    <div style="margin-bottom:6px;color:#cbd5e1">${dict['diff' + cap]}</div>
+    <div class="desc-title">${dict['diff' + cap]}</div>
     <div class="row-desc"><span>${dict.aiIncome}</span><span>${pct(d.aiIncomeMult)}</span></div>
     <div class="row-desc"><span>${dict.aiUnits}</span><span>${pct(d.aiUnitMult)}</span></div>
     <div class="row-desc"><span>${dict.playerMoney}</span><span>${pct(d.playerMoneyMult)}</span></div>
@@ -175,8 +182,6 @@ document.getElementById('start-btn').addEventListener('click', startGame);
     b.classList.toggle('selected', b.dataset.lang === lang);
   });
   applyLanguage(lang);
-
-  // Показать описание дефолтной сложности
   updateDifficultyDesc(state.settings.difficulty);
 })();
 
@@ -187,23 +192,18 @@ function startGame() {
   state.enemyFaction = s.faction === 'aurora' ? 'vesper' : 'aurora';
   state.difficulty = s.difficulty;
 
-  // Стартовые значения фракции
   const f = FACTIONS[state.faction];
   Object.assign(state, f.start);
 
-  // Модификаторы сложности
   const d = DIFFICULTY[state.difficulty];
   state.money *= d.playerMoneyMult;
   state.satisfaction -= d.playerSatPenalty;
 
-  // Переключаем экраны
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
 
-  // Скорость ×1 по умолчанию
   document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
 
-  // Запуск игрового цикла
   lastTime = performance.now();
   requestAnimationFrame(loop);
 }
@@ -228,25 +228,20 @@ function calcIncome() {
 }
 
 function update(dt) {
-  // Деньги
   state.money += calcIncome() * dt;
 
-  // Население
   let popDelta = 0;
   if (state.satisfaction > 60) popDelta = BALANCE.basePopulationGrowth * ((state.satisfaction - 60) / 40);
   else if (state.satisfaction < 30) popDelta = -BALANCE.basePopulationGrowth * ((30 - state.satisfaction) / 30);
   state.population = Math.max(0, state.population + popDelta * dt);
 
-  // Удовлетворённость
   let satDelta = 0;
   if (state.corruption > 50) satDelta -= 0.4 * ((state.corruption - 50) / 50);
   if (satDelta < 0) satDelta *= (1 + state.corruption / 100);
   state.satisfaction = Math.max(0, Math.min(100, state.satisfaction + satDelta * dt));
 
-  // Коррупция
   state.corruption = Math.max(0, Math.min(100, state.corruption + (0.3 * 0.05 - 0.02) * dt));
 
-  // Переворот
   if (state.satisfaction <= 0) { state.gameOver = true; return; }
   if (state.satisfaction < BALANCE.coupWarningThreshold) {
     if (state.coupTimer === null) state.coupTimer = BALANCE.coupTimerSeconds;
