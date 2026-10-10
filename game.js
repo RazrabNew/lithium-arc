@@ -5,24 +5,20 @@ if (tg) { tg.ready(); tg.expand(); }
 // ============ КОНСТАНТЫ ============
 const FACTIONS = {
   aurora: {
-    name: 'Республика Аврора',
-    color: '#00d4ff',
-    start: { money: 500, satisfaction: 80, corruption: 20, population: 1000 },
-    modifiers: { casualtySatPenalty: 3, victorySatBonus: 12 },
+    name: 'Республика Аврора', color: '#00d4ff',
+    start: { money: 1500, welfare: 80, population: 127500000, taxRate: 0.30 },
   },
   vesper: {
-    name: 'Доминион Веспер',
-    color: '#ff3b5c',
-    start: { money: 500, satisfaction: 60, corruption: 45, population: 1500 },
-    modifiers: { casualtySatPenalty: 1, victorySatBonus: 6 },
+    name: 'Доминион Веспер', color: '#ff3b5c',
+    start: { money: 1500, welfare: 60, population: 100000000, taxRate: 0.35 },
   },
 };
 
 const DIFFICULTY = {
-  easy:   { aiIncomeMult: 0.8, playerMoneyMult: 1.0, playerSatPenalty: 0 },
-  normal: { aiIncomeMult: 1.0, playerMoneyMult: 1.0, playerSatPenalty: 0 },
-  hard:   { aiIncomeMult: 1.3, playerMoneyMult: 0.9, playerSatPenalty: 0 },
-  insane: { aiIncomeMult: 1.6, playerMoneyMult: 0.8, playerSatPenalty: 10 },
+  easy:   { playerMoneyMult: 1.2, playerSatPenalty: 0 },
+  normal: { playerMoneyMult: 1.0, playerSatPenalty: 0 },
+  hard:   { playerMoneyMult: 0.85, playerSatPenalty: 5 },
+  insane: { playerMoneyMult: 0.7, playerSatPenalty: 15 },
 };
 
 const LANG = {
@@ -32,29 +28,80 @@ const LANG = {
     startGame: 'НАЧАТЬ ИГРУ',
     auroraName: 'Республика Аврора', vesperName: 'Доминион Веспер',
     easy: 'Легко', normal: 'Норма', hard: 'Сложно', insane: 'Хардкор',
-    diffEasy: 'Спокойное знакомство. ИИ медлит.', diffNormal: 'Сбалансированная игра.',
-    diffHard: 'ИИ агрессивнее и богаче.', diffInsane: 'Максимальное давление.',
-    aiIncome: 'Доход ИИ', aiUnits: 'Сила ИИ', playerMoney: 'Ваши деньги', playerSat: 'Старт. довольность',
+    diffEasy: 'Спокойное знакомство.', diffNormal: 'Сбалансированная игра.',
+    diffHard: 'ИИ агрессивнее.', diffInsane: 'Максимальное давление.',
+    aiIncome: 'Доход', playerMoney: 'Ваши деньги', playerSat: 'Старт. благо',
     chooseTarget: 'Выберите цель', chooseSource: 'Откуда атаковать?', backToMenu: 'В меню',
     ownerAurora: 'Аврора', ownerVesper: 'Веспер', ownerNeutral: 'Нейтрал',
     typeCapital: 'Столица', typeLarge: 'Крупный', typeMedium: 'Средний', typeSmall: 'Малый',
     cityOwner: 'Владелец:', cityType: 'Тип:', cityGarrison: 'Гарнизон:',
-    cityInfra: 'Инфраструктура:', cityIncome: 'Доход:',
+    cityInfra: 'Инфраструктура:', cityIncome: 'Доход:', cityDefense: 'Оборона:',
+    cityBuildings: 'Здания:', cityStrategic: 'Стратег. объект:',
+    tabCountry: 'Страна', tabServices: 'Службы', tabLogistics: 'Логистика', tabProduction: 'Производство',
+    populationLabel: 'Население', birthRate: 'Рождаемость', deathRate: 'Смертность',
+    workersLabel: 'Работают', armyLabel: 'В армии', welfareLabel: 'Благосостояние',
+    taxLabel: 'Налоги', paymentsLabel: 'Выплаты населению',
+    svcScience: 'Наука и образование', svcOrder: 'Правопорядок',
+    svcHealth: 'Здравоохранение', svcEmergency: 'МЧС', svcCorruption: 'Коррупция',
+    invest: 'Вложить +8', antiCorruption: 'Антикоррупционная кампания',
+    svcScienceDesc: 'До +25% дохода', svcOrderDesc: 'Меньше беспорядков',
+    svcHealthDesc: 'Меньше потерь', svcEmergencyDesc: 'Меньше ущерба',
+    grpEconomy: '🏭 Экономика и производство', grpMilitary: '⚔️ Военная мощь',
+    grpResources: '📦 Ресурсы', grpBuild: '🏗️ Здания в городах',
+    techEconomy: 'Экономика', techCombat: 'Боевая подготовка', techArmor: 'Военная техника',
+    techLogistics: 'Логистика', techAA: 'ПВО', techDrones: 'Дроны',
+    techDroneFactory: 'Заводы дронов', techMobilization: 'Мобилизация',
+    techLife: 'Качество жизни', techBirth: 'Рождаемость',
+    techEconomyDesc: '+20% дохода за уровень', techCombatDesc: '+12% атаки за уровень',
+    techArmorDesc: '+12% обороны за уровень', techLogisticsDesc: '−8% расход, +10% выпуск',
+    techAADesc: 'Шанс сбить дроны', techDronesDesc: 'Открывает дроны',
+    techDroneFactoryDesc: '+0.04/с сборка дронов', techMobDesc: 'Открывает призыв',
+    techLifeDesc: '+0.07 к благу/с', techBirthDesc: '+1.2‰ за уровень',
+    mobilize: 'Мобилизация · призыв',
+    resAmmo: 'Боеприпасы', resWeapons: 'Оружие', resTanks: 'Танки', resFuel: 'Топливо',
+    buy: 'Купить', bldMine: 'Шахта', bldFactory: 'Завод', bldAmmo: 'Завод боеприпасов',
+    bldWeapon: 'Оружейный завод', bldTank: 'Танковый завод', bldOil: 'Нефтяная скважина',
+    buildHint: 'Тапните город → кнопка «Строить».',
   },
   en: {
-    gameTitle: 'LITHIUM ARC', gameSubtitle: 'Real-time strategy for the resource of the future',
+    gameTitle: 'LITHIUM ARC', gameSubtitle: 'Real-time strategy',
     language: 'LANGUAGE · ЯЗЫК', faction: 'FACTION', difficulty: 'DIFFICULTY',
     startGame: 'START GAME',
     auroraName: 'Aurora Republic', vesperName: 'Vesper Dominion',
     easy: 'Easy', normal: 'Normal', hard: 'Hard', insane: 'Insane',
-    diffEasy: 'A calm introduction.', diffNormal: 'Balanced game.',
-    diffHard: 'AI is more aggressive and richer.', diffInsane: 'Maximum pressure.',
-    aiIncome: 'AI income', aiUnits: 'AI power', playerMoney: 'Your money', playerSat: 'Start satisfaction',
-    chooseTarget: 'Choose target', chooseSource: 'Attack from where?', backToMenu: 'Back to menu',
+    diffEasy: 'Calm intro.', diffNormal: 'Balanced.', diffHard: 'AI aggressive.', diffInsane: 'Maximum pressure.',
+    aiIncome: 'Income', playerMoney: 'Your money', playerSat: 'Start welfare',
+    chooseTarget: 'Choose target', chooseSource: 'Attack from?', backToMenu: 'Back',
     ownerAurora: 'Aurora', ownerVesper: 'Vesper', ownerNeutral: 'Neutral',
     typeCapital: 'Capital', typeLarge: 'Large', typeMedium: 'Medium', typeSmall: 'Small',
     cityOwner: 'Owner:', cityType: 'Type:', cityGarrison: 'Garrison:',
-    cityInfra: 'Infrastructure:', cityIncome: 'Income:',
+    cityInfra: 'Infrastructure:', cityIncome: 'Income:', cityDefense: 'Defense:',
+    cityBuildings: 'Buildings:', cityStrategic: 'Strategic:',
+    tabCountry: 'Country', tabServices: 'Services', tabLogistics: 'Logistics', tabProduction: 'Production',
+    populationLabel: 'Population', birthRate: 'Birth rate', deathRate: 'Death rate',
+    workersLabel: 'Workers', armyLabel: 'In army', welfareLabel: 'Welfare',
+    taxLabel: 'Taxes', paymentsLabel: 'Payments to people',
+    svcScience: 'Science & Education', svcOrder: 'Law & Order',
+    svcHealth: 'Healthcare', svcEmergency: 'Emergency', svcCorruption: 'Corruption',
+    invest: 'Invest +8', antiCorruption: 'Anti-corruption',
+    svcScienceDesc: 'Up to +25% income', svcOrderDesc: 'Fewer riots',
+    svcHealthDesc: 'Fewer losses', svcEmergencyDesc: 'Less damage',
+    grpEconomy: '🏭 Economy & Production', grpMilitary: '⚔️ Military',
+    grpResources: '📦 Resources', grpBuild: '🏗️ Buildings',
+    techEconomy: 'Economy', techCombat: 'Combat', techArmor: 'Armor',
+    techLogistics: 'Logistics', techAA: 'Air defense', techDrones: 'Drones',
+    techDroneFactory: 'Drone factories', techMobilization: 'Mobilization',
+    techLife: 'Quality of life', techBirth: 'Birth rate',
+    techEconomyDesc: '+20% income/level', techCombatDesc: '+12% attack/level',
+    techArmorDesc: '+12% defense/level', techLogisticsDesc: '−8% cost, +10% output',
+    techAADesc: 'Shoot down drones', techDronesDesc: 'Unlock drones',
+    techDroneFactoryDesc: '+0.04/s drone build', techMobDesc: 'Unlock conscription',
+    techLifeDesc: '+0.07 welfare/s', techBirthDesc: '+1.2‰/level',
+    mobilize: 'Mobilization',
+    resAmmo: 'Ammo', resWeapons: 'Weapons', resTanks: 'Tanks', resFuel: 'Fuel',
+    buy: 'Buy', bldMine: 'Mine', bldFactory: 'Factory', bldAmmo: 'Ammo factory',
+    bldWeapon: 'Weapon factory', bldTank: 'Tank factory', bldOil: 'Oil well',
+    buildHint: 'Tap a city → «Build» button.',
   },
 };
 
@@ -62,53 +109,76 @@ const LANG = {
 const state = {
   settings: { language: 'ru', faction: null, difficulty: 'normal' },
   faction: null, enemyFaction: null, difficulty: null,
-  money: 0, satisfaction: 0, corruption: 0, population: 0,
+  money: 0, welfare: 55, population: 127500000, taxRate: 0.30,
+  army: 0,
   timeScale: 1, paused: false, gameOver: false,
-  coupTimer: null, gameOverShown: false,
+  gameOverShown: false, welfareTrend: 0,
+  paymentsCost: 70,
+  services: { science: 31, order: 23, health: 23, emergency: 23, corruption: 9 },
+  tech: {
+    economy: 2, combat: 2, armor: 1, logistics: 1, aa: 2,
+    drones: 1, dronefactory: 1, mobilization: 1, life: 2, birth: 1,
+  },
+  resources: { ammo: 139, weapons: 71, tanks: 3, fuel: 162 },
+  mobilizeCooldown: 0,
 };
 
-const BALANCE = {
-  baseTaxIncome: 0.5,
-  basePopulationGrowth: 0.5,
-  coupWarningThreshold: 5,
-  coupTimerSeconds: 60,
-};
+const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300 };
 
 // ============ КАРТА ============
 const MAP = { W: 40, H: 30, TILE: 40 };
 const WORLD_W = MAP.W * MAP.TILE;
 const WORLD_H = MAP.H * MAP.TILE;
 
-let map = [];
 let CITIES = [];
 let ROADS = [];
 let ACTIVE_ATTACKS = [];
-
 let seed = 12345;
-function rand() {
-  seed = (seed * 9301 + 49297) % 233280;
-  return seed / 233280;
-}
+function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
 
-// ============ CANVAS ============
 let canvas, ctx, dpr = window.devicePixelRatio || 1;
 let worldCanvas, worldCtx;
 
 const camera = {
-  x: 0, y: 0,
-  zoom: 1,
-  minZoom: 0.5,
-  maxZoom: 2.5,
-  dragging: false,
-  dragStartX: 0, dragStartY: 0,
-  cameraStartX: 0, cameraStartY: 0,
-  moved: false,
-  pinching: false,
-  pinchStartDist: 0,
-  pinchStartZoom: 1,
-  pinchCenterX: 0,
-  pinchCenterY: 0,
+  x: 0, y: 0, zoom: 1, minZoom: 0.5, maxZoom: 2.5,
+  dragging: false, dragStartX: 0, dragStartY: 0,
+  cameraStartX: 0, cameraStartY: 0, moved: false,
+  pinching: false, pinchStartDist: 0, pinchStartZoom: 1,
+  pinchCenterX: 0, pinchCenterY: 0,
 };
+
+// ============ КОНФИГУРАЦИИ ============
+const SERVICES_CFG = {
+  science:     { baseCost: 130, increment: 8 },
+  order:       { baseCost: 95,  increment: 8 },
+  health:      { baseCost: 95,  increment: 8 },
+  emergency:   { baseCost: 95,  increment: 8 },
+};
+
+const TECH_CFG = {
+  economy: 300, combat: 350, armor: 300, logistics: 280,
+  aa: 400, drones: 350, dronefactory: 280, mobilization: 280,
+  life: 380, birth: 280,
+};
+
+const BUILDINGS_CFG = {
+  mine:          { ru: 'Шахта', en: 'Mine', cost: 850 },
+  factory:       { ru: 'Завод', en: 'Factory', cost: 700 },
+  ammoFactory:   { ru: 'Завод боеприпасов', en: 'Ammo factory', cost: 1020 },
+  weaponFactory: { ru: 'Оружейный завод', en: 'Weapon factory', cost: 1360 },
+  tankFactory:   { ru: 'Танковый завод', en: 'Tank factory', cost: 1200 },
+  oilWell:       { ru: 'Нефтяная скважина', en: 'Oil well', cost: 1105 },
+};
+
+const FORTIFICATIONS = [
+  { level: 0, icon: '🏘️', ru: 'Открытый', en: 'Open', cost: 0 },
+  { level: 1, icon: '🛡️', ru: 'Окопы', en: 'Trenches', cost: 50 },
+  { level: 2, icon: '🏰', ru: 'Бункеры', en: 'Bunkers', cost: 150 },
+  { level: 3, icon: '🚀', ru: 'ПВО', en: 'Air def', cost: 300 },
+  { level: 4, icon: '🛰️', ru: 'РЭБ', en: 'EW', cost: 600 },
+];
+
+const MAX_BUILDINGS = 8;
 
 // ============ МЕНЮ ============
 function applyLanguage(lang) {
@@ -146,17 +216,16 @@ function updateDifficultyDesc(diff) {
   el.dataset.diff = diff;
 
   const pct = (mult) => {
-    const val = Math.round((mult - 1) * 100);
-    return (val > 0 ? '+' : '') + val + '%';
+    const v = Math.round((mult - 1) * 100);
+    return (v > 0 ? '+' : '') + v + '%';
   };
 
   const cap = diff.charAt(0).toUpperCase() + diff.slice(1);
 
   el.innerHTML = `
     <div class="desc-title">${dict['diff' + cap]}</div>
-    <div class="row-desc"><span>${dict.aiIncome}</span><span>${pct(d.aiIncomeMult)}</span></div>
     <div class="row-desc"><span>${dict.playerMoney}</span><span>${pct(d.playerMoneyMult)}</span></div>
-    <div class="row-desc"><span>${dict.playerSat}</span><span>${d.playerSatPenalty > 0 ? '−' + d.playerSatPenalty + '%' : '—'}</span></div>
+    <div class="row-desc"><span>${dict.playerSat}</span><span>${d.playerSatPenalty > 0 ? '−' + d.playerSatPenalty : '—'}</span></div>
   `;
 }
 
@@ -192,16 +261,6 @@ document.getElementById('start-btn').addEventListener('click', startGame);
   updateDifficultyDesc(state.settings.difficulty);
 })();
 
-// ============ ГЕНЕРАЦИЯ КАРТЫ ============
-function generateMap() {
-  map = [];
-  for (let y = 0; y < MAP.H; y++) {
-    const row = [];
-    for (let x = 0; x < MAP.W; x++) row.push(0);
-    map.push(row);
-  }
-}
-
 // ============ ГЕНЕРАЦИЯ ГОРОДОВ ============
 function generateCities() {
   CITIES = [];
@@ -209,19 +268,23 @@ function generateCities() {
   CITIES.push({
     x: 3, y: 3, type: 'capital', owner: 'aurora',
     name: 'Аврора', baseIncome: 1.5, basePop: 5, infrastructure: 100, garrison: 5,
+    fortification: 2,
+    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
   });
   CITIES.push({
     x: MAP.W - 4, y: MAP.H - 4, type: 'capital', owner: 'vesper',
     name: 'Веспер', baseIncome: 1.5, basePop: 5, infrastructure: 100, garrison: 5,
+    fortification: 2,
+    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
   });
 
   const auroraZone = { xMin: 2, xMax: 16, yMin: 2, yMax: MAP.H - 3 };
   const vesperZone = { xMin: 23, xMax: MAP.W - 3, yMin: 2, yMax: MAP.H - 3 };
 
   const composition = [
-    { type: 'large',  count: 5,  baseIncome: 0.8, basePop: 2,   garrison: 3 },
-    { type: 'medium', count: 10, baseIncome: 0.4, basePop: 1,   garrison: 2 },
-    { type: 'small',  count: 15, baseIncome: 0.15, basePop: 0.3, garrison: 1 },
+    { type: 'large', count: 5, baseIncome: 0.8, garrison: 3 },
+    { type: 'medium', count: 10, baseIncome: 0.4, garrison: 2 },
+    { type: 'small', count: 15, baseIncome: 0.15, garrison: 1 },
   ];
 
   const prefixAurora = ['Север', 'Запад', 'Край', 'Верх', 'Бел', 'Нов', 'Стар', 'Крас', 'Свет', 'Тих'];
@@ -238,21 +301,21 @@ function generateCities() {
     return 'Город-' + Math.floor(rand() * 10000);
   };
 
-  const placeCities = (owner, zone, namePrefixes) => {
-    composition.forEach(({ type, count, baseIncome, basePop, garrison }) => {
+  const placeCities = (owner, zone, prefixes) => {
+    composition.forEach(({ type, count, baseIncome, garrison }) => {
       let placed = 0, attempts = 0;
       while (placed < count && attempts < 1000) {
         attempts++;
         const x = zone.xMin + Math.floor(rand() * (zone.xMax - zone.xMin));
         const y = zone.yMin + Math.floor(rand() * (zone.yMax - zone.yMin));
-
         if (CITIES.some(c => Math.abs(c.x - x) < 3 && Math.abs(c.y - y) < 3)) continue;
 
         CITIES.push({
-          x, y, type, owner,
-          name: genName(namePrefixes),
-          baseIncome, basePop, garrison,
+          x, y, type, owner, name: genName(prefixes),
+          baseIncome, basePop: 1, garrison,
           infrastructure: 60 + Math.floor(rand() * 30),
+          fortification: 0,
+          buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
         });
         placed++;
       }
@@ -265,8 +328,7 @@ function generateCities() {
 
 // ============ ГЕНЕРАЦИЯ ДОРОГ ============
 function getRoadsFrom(city) {
-  return ROADS
-    .filter(r => r.from === city || r.to === city)
+  return ROADS.filter(r => r.from === city || r.to === city)
     .map(r => r.from === city ? r.to : r.from);
 }
 
@@ -275,39 +337,25 @@ function generateRoads() {
   const seen = new Set();
 
   CITIES.forEach(city => {
-    const neighbors = CITIES
-      .filter(c => c !== city)
+    const neighbors = CITIES.filter(c => c !== city)
       .map(c => ({ city: c, dist: Math.hypot(c.x - city.x, c.y - city.y) }))
       .sort((a, b) => a.dist - b.dist);
 
-    let maxLinks;
-    switch (city.type) {
-      case 'capital': maxLinks = 4; break;
-      case 'large':   maxLinks = 3; break;
-      case 'medium':  maxLinks = 2; break;
-      default:        maxLinks = 2;
-    }
-
+    let maxLinks = city.type === 'capital' ? 4 : city.type === 'large' ? 3 : 2;
     let links = 0;
+
     for (const { city: neighbor, dist } of neighbors) {
       if (links >= maxLinks) break;
       if (dist > 8) break;
-
       const key = [CITIES.indexOf(city), CITIES.indexOf(neighbor)].sort().join('-');
       if (seen.has(key)) { links++; continue; }
       if (city.owner !== neighbor.owner) continue;
-
       seen.add(key);
-      ROADS.push({
-        from: city,
-        to: neighbor,
-        type: city.owner === 'aurora' ? 'own' : 'enemy',
-      });
+      ROADS.push({ from: city, to: neighbor, type: city.owner === 'aurora' ? 'own' : 'enemy' });
       links++;
     }
   });
 
-  // Межфракционные
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
 
@@ -315,57 +363,38 @@ function generateRoads() {
     const enemyNeighbors = vesperCities
       .map(v => ({ city: v, dist: Math.hypot(v.x - aCity.x, v.y - aCity.y) }))
       .sort((a, b) => a.dist - b.dist);
-
     let borderLinks = 0;
-    const maxBorderLinks = aCity.type === 'capital' ? 2 : 1;
-
     for (const { city: vCity, dist } of enemyNeighbors) {
-      if (borderLinks >= maxBorderLinks) break;
+      if (borderLinks >= 1) break;
       if (dist > 10) break;
-
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
-
       ROADS.push({ from: aCity, to: vCity, type: 'border' });
       borderLinks++;
     }
   });
 }
 
-// ============ WORLD CANVAS (Voronoi через d3-delaunay) ============
+// ============ WORLD CANVAS ============
 function generateWorldCanvas() {
   worldCanvas = document.createElement('canvas');
   worldCanvas.width = WORLD_W;
   worldCanvas.height = WORLD_H;
   worldCtx = worldCanvas.getContext('2d');
 
-  // 1. Тёмный фон
   worldCtx.fillStyle = '#141820';
   worldCtx.fillRect(0, 0, WORLD_W, WORLD_H);
 
-  // 2. Voronoi-регионы
   drawRegionsVoronoi();
-
-  // 3. Река
   drawRiver();
-
-  // 4. Легкая текстура
-  drawTexture();
 }
 
 function drawRegionsVoronoi() {
-  // Точки = центры городов
-  const points = CITIES.map(c => [
-    c.x * MAP.TILE + MAP.TILE / 2,
-    c.y * MAP.TILE + MAP.TILE / 2,
-  ]);
-
-  // Строим Voronoi через d3-delaunay
+  const points = CITIES.map(c => [c.x * MAP.TILE + MAP.TILE / 2, c.y * MAP.TILE + MAP.TILE / 2]);
   const delaunay = d3.Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, WORLD_W, WORLD_H]);
 
-  // Рисуем каждый регион
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
@@ -373,7 +402,6 @@ function drawRegionsVoronoi() {
     const cx = city.x * MAP.TILE + MAP.TILE / 2;
     const cy = city.y * MAP.TILE + MAP.TILE / 2;
 
-    // Цвет владельца
     let centerColor, edgeColor;
     if (city.owner === 'aurora') {
       centerColor = 'rgba(0, 90, 130, 0.85)';
@@ -386,80 +414,33 @@ function drawRegionsVoronoi() {
       edgeColor = 'rgba(35, 40, 48, 0.85)';
     }
 
-    // Градиент от центра к краям
     const grad = worldCtx.createRadialGradient(cx, cy, 0, cx, cy, 250);
     grad.addColorStop(0, centerColor);
     grad.addColorStop(1, edgeColor);
 
-    // Полигон
     worldCtx.beginPath();
     polygon.forEach(([x, y], j) => {
       if (j === 0) worldCtx.moveTo(x, y);
       else worldCtx.lineTo(x, y);
     });
     worldCtx.closePath();
-
     worldCtx.fillStyle = grad;
     worldCtx.fill();
-
-    // Границы — тёмная тонкая линия
     worldCtx.strokeStyle = 'rgba(8, 10, 14, 0.95)';
     worldCtx.lineWidth = 1.5;
     worldCtx.stroke();
   });
-
-  // Дополнительный слой — жирные границы между разными владельцами
-  drawFactionBorders(voronoi);
-}
-
-function drawFactionBorders(voronoi) {
-  // Пробегаем по всем рёбрам Voronoi
-  for (let i = 0; i < CITIES.length; i++) {
-    const neighborIter = voronoi.neighbors(i);
-    for (const j of neighborIter) {
-      if (i >= j) continue;
-      if (CITIES[i].owner === CITIES[j].owner) continue;
-
-      // Общая граница — рисуем жирнее
-      const cell1 = voronoi.cellPolygon(i);
-      const cell2 = voronoi.cellPolygon(j);
-      if (!cell1 || !cell2) continue;
-
-      // Находим общие точки
-      const shared = [];
-      cell1.forEach(p1 => {
-        cell2.forEach(p2 => {
-          if (Math.abs(p1[0] - p2[0]) < 0.5 && Math.abs(p1[1] - p2[1]) < 0.5) {
-            shared.push(p1);
-          }
-        });
-      });
-
-      if (shared.length >= 2) {
-        worldCtx.beginPath();
-        worldCtx.moveTo(shared[0][0], shared[0][1]);
-        for (let k = 1; k < shared.length; k++) {
-          worldCtx.lineTo(shared[k][0], shared[k][1]);
-        }
-        worldCtx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
-        worldCtx.lineWidth = 2.5;
-        worldCtx.stroke();
-      }
-    }
-  }
 }
 
 function drawRiver() {
   let px = WORLD_W * 0.45;
   let phase = 0;
-
   worldCtx.strokeStyle = '#0a1a28';
   worldCtx.lineWidth = 10;
   worldCtx.lineCap = 'round';
   worldCtx.lineJoin = 'round';
   worldCtx.beginPath();
   worldCtx.moveTo(px, 0);
-
   for (let py = 0; py < WORLD_H; py += 8) {
     phase += 0.18;
     px += Math.sin(phase) * 14;
@@ -467,19 +448,9 @@ function drawRiver() {
     worldCtx.lineTo(px, py);
   }
   worldCtx.stroke();
-
   worldCtx.strokeStyle = '#153a5a';
   worldCtx.lineWidth = 4;
   worldCtx.stroke();
-}
-
-function drawTexture() {
-  worldCtx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-  for (let i = 0; i < 600; i++) {
-    const x = rand() * WORLD_W;
-    const y = rand() * WORLD_H;
-    worldCtx.fillRect(x, y, 2, 2);
-  }
 }
 
 // ============ CANVAS ============
@@ -501,14 +472,10 @@ function centerOnPlayerBase() {
   const rect = canvas.getBoundingClientRect();
   const cap = CITIES.find(c => c.type === 'capital' && c.owner === state.faction);
   if (!cap) return;
-
   const worldCx = cap.x * MAP.TILE + MAP.TILE / 2;
   const worldCy = cap.y * MAP.TILE + MAP.TILE / 2;
-  const viewW = rect.width / camera.zoom;
-  const viewH = rect.height / camera.zoom;
-
-  camera.x = worldCx - viewW / 2;
-  camera.y = worldCy - viewH / 2;
+  camera.x = worldCx - rect.width / camera.zoom / 2;
+  camera.y = worldCy - rect.height / camera.zoom / 2;
   clampCamera();
 }
 
@@ -516,10 +483,8 @@ function clampCamera() {
   const rect = canvas.getBoundingClientRect();
   const viewW = rect.width / camera.zoom;
   const viewH = rect.height / camera.zoom;
-
   if (WORLD_W <= viewW) camera.x = (WORLD_W - viewW) / 2;
   else camera.x = Math.max(0, Math.min(WORLD_W - viewW, camera.x));
-
   if (WORLD_H <= viewH) camera.y = (WORLD_H - viewH) / 2;
   else camera.y = Math.max(0, Math.min(WORLD_H - viewH, camera.y));
 }
@@ -527,12 +492,9 @@ function clampCamera() {
 // ============ УПРАВЛЕНИЕ ============
 function initCameraControls() {
   canvas.addEventListener('mousedown', e => {
-    camera.dragging = true;
-    camera.moved = false;
-    camera.dragStartX = e.clientX;
-    camera.dragStartY = e.clientY;
-    camera.cameraStartX = camera.x;
-    camera.cameraStartY = camera.y;
+    camera.dragging = true; camera.moved = false;
+    camera.dragStartX = e.clientX; camera.dragStartY = e.clientY;
+    camera.cameraStartX = camera.x; camera.cameraStartY = camera.y;
   });
 
   window.addEventListener('mousemove', e => {
@@ -546,38 +508,27 @@ function initCameraControls() {
   });
 
   window.addEventListener('mouseup', e => {
-    if (camera.dragging && !camera.moved) {
-      handleCanvasClick(e.clientX, e.clientY);
-    }
+    if (camera.dragging && !camera.moved) handleCanvasClick(e.clientX, e.clientY);
     camera.dragging = false;
   });
 
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    zoomAt(e.clientX, e.clientY, factor);
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15);
   }, { passive: false });
 
   canvas.addEventListener('touchstart', e => {
     e.preventDefault();
-
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      camera.dragging = true;
-      camera.moved = false;
-      camera.dragStartX = t.clientX;
-      camera.dragStartY = t.clientY;
-      camera.cameraStartX = camera.x;
-      camera.cameraStartY = camera.y;
+      camera.dragging = true; camera.moved = false;
+      camera.dragStartX = t.clientX; camera.dragStartY = t.clientY;
+      camera.cameraStartX = camera.x; camera.cameraStartY = camera.y;
     } else if (e.touches.length === 2) {
-      camera.dragging = false;
-      camera.pinching = true;
-
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
+      camera.dragging = false; camera.pinching = true;
+      const t1 = e.touches[0], t2 = e.touches[1];
       camera.pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       camera.pinchStartZoom = camera.zoom;
-
       const rect = canvas.getBoundingClientRect();
       camera.pinchCenterX = (t1.clientX + t2.clientX) / 2 - rect.left;
       camera.pinchCenterY = (t1.clientY + t2.clientY) / 2 - rect.top;
@@ -586,7 +537,6 @@ function initCameraControls() {
 
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-
     if (camera.dragging && e.touches.length === 1) {
       const t = e.touches[0];
       const dx = t.clientX - camera.dragStartX;
@@ -596,10 +546,8 @@ function initCameraControls() {
       camera.y = camera.cameraStartY - dy / camera.zoom;
       clampCamera();
     } else if (camera.pinching && e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
+      const t1 = e.touches[0], t2 = e.touches[1];
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-
       const factor = dist / camera.pinchStartDist;
       const newZoom = Math.max(camera.minZoom, Math.min(camera.maxZoom, camera.pinchStartZoom * factor));
       applyZoomAt(camera.pinchCenterX, camera.pinchCenterY, newZoom);
@@ -608,14 +556,11 @@ function initCameraControls() {
 
   canvas.addEventListener('touchend', e => {
     e.preventDefault();
-
     if (camera.pinching && e.touches.length < 2) camera.pinching = false;
-
     if (camera.dragging && !camera.moved && e.changedTouches[0] && e.touches.length === 0) {
       const t = e.changedTouches[0];
       handleCanvasClick(t.clientX, t.clientY);
     }
-
     if (e.touches.length === 0) camera.dragging = false;
   }, { passive: false });
 }
@@ -631,12 +576,9 @@ function zoomAt(clientX, clientY, factor) {
 function applyZoomAt(localX, localY, newZoom) {
   const worldX = localX / camera.zoom + camera.x;
   const worldY = localY / camera.zoom + camera.y;
-
   camera.zoom = newZoom;
-
   camera.x = worldX - localX / camera.zoom;
   camera.y = worldY - localY / camera.zoom;
-
   clampCamera();
 }
 
@@ -651,25 +593,19 @@ function handleCanvasClick(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const localX = clientX - rect.left;
   const localY = clientY - rect.top;
-
   const worldX = localX / camera.zoom + camera.x;
   const worldY = localY / camera.zoom + camera.y;
 
-  let closest = null;
-  let minDist = 30;
+  let closest = null, minDist = 30;
   CITIES.forEach(c => {
     const cx = c.x * MAP.TILE + MAP.TILE / 2;
     const cy = c.y * MAP.TILE + MAP.TILE / 2;
     const d = Math.hypot(worldX - cx, worldY - cy);
-    if (d < minDist) {
-      minDist = d;
-      closest = c;
-    }
+    if (d < minDist) { minDist = d; closest = c; }
   });
 
-  if (closest) {
-    openCityPanel(closest);
-  } else {
+  if (closest) openCityPanel(closest);
+  else {
     closeCityPanel();
     closeAttackTargetPanel();
     closeAttackSourcesPanel();
@@ -679,9 +615,18 @@ function handleCanvasClick(clientX, clientY) {
 // ============ ПАНЕЛЬ ГОРОДА ============
 let selectedCity = null;
 
+function getFortification(city) {
+  return FORTIFICATIONS[city.fortification || 0];
+}
+
+function getDefenseMultiplier(city) {
+  return 1 + (city.fortification || 0) * 0.15;
+}
+
 function openCityPanel(city) {
   selectedCity = city;
   const dict = LANG[state.settings.language];
+  const lang = state.settings.language;
   const panel = document.getElementById('city-panel');
   panel.classList.remove('hidden');
 
@@ -696,36 +641,58 @@ function openCityPanel(city) {
   document.getElementById('city-garrison').textContent = city.garrison;
   document.getElementById('city-infra').textContent = city.infrastructure + '%';
 
+  const fort = getFortification(city);
+  document.getElementById('city-defense').textContent = `${fort.icon} ${lang === 'ru' ? fort.ru : fort.en}`;
+
   const isOwn = city.owner === state.faction;
-  const income = isOwn
-    ? city.baseIncome * (city.infrastructure / 100) * (state.satisfaction / 100)
-    : 0;
-  document.getElementById('city-income').textContent = isOwn
-    ? '+' + income.toFixed(2) + '/с'
-    : '—';
+  const income = isOwn ? city.baseIncome * (city.infrastructure / 100) * (state.welfare / 100) : 0;
+  document.getElementById('city-income').textContent = isOwn ? '+' + income.toFixed(2) + '/с' : '—';
+
+  const buildings = city.buildings || {};
+  const totalBuildings = Object.values(buildings).reduce((a, b) => a + b, 0);
+  document.getElementById('city-buildings').textContent = totalBuildings > 0 ? totalBuildings : '—';
+
+  const isStrategic = totalBuildings >= 5;
+  document.getElementById('city-strategic').textContent = isStrategic ? '⚠️ Да' : 'Нет';
+  document.getElementById('city-strategic').style.color = isStrategic ? '#ff3b5c' : '';
 
   const attackBtn = document.getElementById('city-attack-btn');
+  const fortifyBtn = document.getElementById('city-fortify-btn');
+  const buildBtn = document.getElementById('city-build-btn');
 
   if (isOwn) {
-    attackBtn.textContent = '⚔️ ' + (state.settings.language === 'ru' ? 'Наступление' : 'Attack');
+    attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
     attackBtn.disabled = city.garrison < 1;
     attackBtn.onclick = () => openAttackTargetPanel();
-  } else {
-    const sources = getRoadsFrom(city).filter(c =>
-      c.owner === state.faction && c.garrison > 0
-    );
 
+    const nextFort = FORTIFICATIONS[(city.fortification || 0) + 1];
+    if (nextFort) {
+      fortifyBtn.textContent = `${nextFort.icon} ${lang === 'ru' ? nextFort.ru : nextFort.en} (${nextFort.cost}💰)`;
+      fortifyBtn.disabled = state.money < nextFort.cost;
+      fortifyBtn.style.display = 'block';
+      fortifyBtn.onclick = () => fortifyCity(city);
+    } else {
+      fortifyBtn.textContent = '✅ ' + (lang === 'ru' ? 'Максимум' : 'Max');
+      fortifyBtn.disabled = true;
+      fortifyBtn.style.display = 'block';
+    }
+
+    buildBtn.style.display = 'block';
+    buildBtn.disabled = false;
+    buildBtn.onclick = () => openBuildModal(city);
+  } else {
+    const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && c.garrison > 0);
     if (sources.length > 0) {
-      attackBtn.textContent = '⚔️ ' + (state.settings.language === 'ru' ? 'Наступление' : 'Attack');
+      attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
       attackBtn.disabled = false;
       attackBtn.onclick = () => openAttackSourcesPanel(city, sources);
     } else {
-      attackBtn.textContent = '🚫 ' + (state.settings.language === 'ru'
-        ? 'Нет доступных атак'
-        : 'No available attacks');
+      attackBtn.textContent = '🚫 ' + (lang === 'ru' ? 'Нет атак' : 'No attacks');
       attackBtn.disabled = true;
       attackBtn.onclick = null;
     }
+    fortifyBtn.style.display = 'none';
+    buildBtn.style.display = 'none';
   }
 }
 
@@ -736,6 +703,15 @@ function closeCityPanel() {
 
 document.getElementById('city-panel-close').addEventListener('click', closeCityPanel);
 
+function fortifyCity(city) {
+  const nextFort = FORTIFICATIONS[(city.fortification || 0) + 1];
+  if (!nextFort) return;
+  if (state.money < nextFort.cost) return;
+  state.money -= nextFort.cost;
+  city.fortification = nextFort.level;
+  openCityPanel(city);
+}
+
 // ============ ПАНЕЛИ АТАК ============
 function openAttackTargetPanel() {
   if (!selectedCity) return;
@@ -745,11 +721,10 @@ function openAttackTargetPanel() {
   panel.classList.remove('hidden');
   list.innerHTML = '';
 
-  const targets = getRoadsFrom(selectedCity)
-    .filter(c => c.owner !== state.faction);
+  const targets = getRoadsFrom(selectedCity).filter(c => c.owner !== state.faction);
 
   if (targets.length === 0) {
-    list.innerHTML = `<div style="color:#64748b;font-size:12px;padding:10px">${state.settings.language === 'ru' ? 'Нет доступных целей' : 'No targets available'}</div>`;
+    list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:10px">Нет доступных целей</div>';
     return;
   }
 
@@ -759,7 +734,7 @@ function openAttackTargetPanel() {
     row.innerHTML = `
       <div>
         <div class="target-name">${target.name}</div>
-        <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : target.owner === 'vesper' ? dict.ownerVesper : dict.ownerNeutral}</div>
+        <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper}</div>
       </div>
       <div class="target-info">🛡️ ${target.garrison}</div>
     `;
@@ -775,7 +750,6 @@ function openAttackTargetPanel() {
 function closeAttackTargetPanel() {
   document.getElementById('attack-target-panel').classList.add('hidden');
 }
-
 document.getElementById('attack-target-close').addEventListener('click', closeAttackTargetPanel);
 
 function openAttackSourcesPanel(targetCity, sources) {
@@ -806,7 +780,6 @@ function openAttackSourcesPanel(targetCity, sources) {
 function closeAttackSourcesPanel() {
   document.getElementById('attack-sources-panel').classList.add('hidden');
 }
-
 document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
 // ============ АТАКА ============
@@ -814,14 +787,7 @@ function launchAttack(fromCity, toCity) {
   if (fromCity.garrison < 1) return;
   const units = fromCity.garrison;
   fromCity.garrison = 0;
-
-  ACTIVE_ATTACKS.push({
-    from: fromCity,
-    to: toCity,
-    units,
-    progress: 0,
-    speed: 0.3,
-  });
+  ACTIVE_ATTACKS.push({ from: fromCity, to: toCity, units, progress: 0, speed: 0.3 });
 }
 
 function updateAttacks(dt) {
@@ -836,22 +802,351 @@ function updateAttacks(dt) {
 }
 
 function resolveAttack(fromCity, toCity, units) {
-  const attackPower = units;
-  const defensePower = toCity.garrison;
+  const combatBonus = 1 + state.tech.combat * 0.12;
+  const armorBonus = 1 + state.tech.armor * 0.12;
+  const defenseMult = getDefenseMultiplier(toCity);
+
+  const attackPower = units * combatBonus;
+  const defensePower = toCity.garrison * defenseMult * armorBonus;
 
   if (attackPower > defensePower) {
     const losses = Math.ceil(defensePower * 0.7);
     toCity.owner = state.faction;
     toCity.garrison = Math.max(0, units - losses);
-    state.satisfaction -= 5;
+    toCity.fortification = Math.max(0, toCity.fortification - 1);
+    state.welfare -= 5;
   } else {
     toCity.garrison = Math.max(0, toCity.garrison - Math.ceil(attackPower * 0.5));
-    state.satisfaction -= 8;
+    state.welfare -= 8;
   }
-
-  state.satisfaction = Math.max(0, Math.min(100, state.satisfaction));
+  state.welfare = Math.max(0, Math.min(100, state.welfare));
   checkVictory();
 }
+
+// ============ АТАКИ/ПАНЕЛИ ДЕЙСТВИЙ ============
+function openActionsPanel() {
+  document.getElementById('actions-modal').classList.remove('hidden');
+  updateCurrentTab();
+}
+
+function closeActionsPanel() {
+  document.getElementById('actions-modal').classList.add('hidden');
+}
+
+document.getElementById('actions-btn').addEventListener('click', openActionsPanel);
+document.getElementById('actions-close').addEventListener('click', closeActionsPanel);
+
+document.querySelectorAll('.actions-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.disabled) return;
+    document.querySelectorAll('.actions-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.actions-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('panel-' + tab.dataset.tab).classList.remove('hidden');
+    updateCurrentTab();
+  });
+});
+
+function updateCurrentTab() {
+  const active = document.querySelector('.actions-tab.active');
+  if (!active) return;
+  if (active.dataset.tab === 'country') updateActionsPanel();
+  if (active.dataset.tab === 'services') updateServicesPanel();
+  if (active.dataset.tab === 'logistics') updateLogisticsPanel();
+  if (active.dataset.tab === 'production') updateProductionPanel();
+}
+
+// ============ СТРАНА ============
+document.getElementById('ac-tax-slider').addEventListener('input', e => {
+  state.taxRate = parseInt(e.target.value) / 100;
+  updateActionsPanel();
+});
+
+document.getElementById('ac-payments').addEventListener('click', () => {
+  if (state.money < state.paymentsCost) return;
+  state.money -= state.paymentsCost;
+  state.welfare = Math.min(100, state.welfare + 8);
+  state.paymentsCost = Math.round(state.paymentsCost * 1.15);
+  updateActionsPanel();
+});
+
+function updateActionsPanel() {
+  const fmtMln = n => (n / 1e6).toFixed(1) + ' млн';
+  document.getElementById('ac-population').textContent = fmtMln(state.population);
+
+  const birthRate = 8.0 + state.tech.birth * 1.2;
+  const deathRate = 13.0;
+  document.getElementById('ac-birth').textContent = birthRate.toFixed(1) + '‰';
+  document.getElementById('ac-death').textContent = deathRate.toFixed(1) + '‰';
+
+  const laborForce = state.population * 0.60;
+  const army = state.army || (laborForce * 0.43);
+  const workers = laborForce - army;
+  document.getElementById('ac-workers').textContent = fmtMln(workers);
+  document.getElementById('ac-army').textContent = fmtMln(army);
+  document.getElementById('ac-labor-hint').textContent =
+    `Рабочая сила: ${fmtMln(laborForce)} — ${fmtMln(army)} в армии = ${fmtMln(workers)}`;
+
+  document.getElementById('ac-welfare').textContent = Math.floor(state.welfare) + '/100';
+  document.getElementById('ac-welfare-bar').style.width = state.welfare + '%';
+  const tr = document.getElementById('ac-welfare-trend');
+  tr.textContent = `Тренд: ${state.welfareTrend >= 0 ? '+' : ''}${state.welfareTrend.toFixed(2)}/с`;
+  tr.classList.toggle('positive', state.welfareTrend > 0);
+  tr.classList.toggle('negative', state.welfareTrend < 0);
+
+  document.getElementById('ac-tax').textContent = Math.round(state.taxRate * 100) + '%';
+  document.getElementById('ac-tax-slider').value = Math.round(state.taxRate * 100);
+
+  const taxMult = 1 + state.taxRate;
+  const workersMult = workers / (laborForce * 0.85);
+  const welfareMult = state.welfare / 60;
+  document.getElementById('ac-multipliers').innerHTML =
+    `Множители: налог ×${taxMult.toFixed(2)} · работники ×${workersMult.toFixed(2)} · благо ×${welfareMult.toFixed(2)}`;
+
+  document.getElementById('ac-payments-cost').textContent = state.paymentsCost;
+  document.getElementById('ac-payments').disabled = state.money < state.paymentsCost;
+}
+
+// ============ СЛУЖБЫ ============
+function getServiceCost(key) {
+  const cfg = SERVICES_CFG[key];
+  const lvl = state.services[key];
+  return Math.round(cfg.baseCost * Math.pow(1.06, lvl));
+}
+
+function getCorruptionCost() {
+  return Math.round(80 * Math.pow(1.08, 100 - state.services.corruption));
+}
+
+['science', 'order', 'health', 'emergency'].forEach(key => {
+  document.getElementById(`svc-${key}-btn`).addEventListener('click', () => {
+    const cost = getServiceCost(key);
+    if (state.money < cost || state.services[key] >= 100) return;
+    state.money -= cost;
+    state.services[key] = Math.min(100, state.services[key] + 8);
+    updateServicesPanel();
+  });
+});
+
+document.getElementById('svc-corruption-btn').addEventListener('click', () => {
+  const cost = getCorruptionCost();
+  if (state.money < cost || state.services.corruption <= 0) return;
+  state.money -= cost;
+  state.services.corruption = Math.max(0, state.services.corruption - 12);
+  updateServicesPanel();
+});
+
+function updateServicesPanel() {
+  const s = state.services;
+  ['science', 'order', 'health', 'emergency'].forEach(key => {
+    document.getElementById(`svc-${key}-level`).textContent = s[key] + '/100';
+    document.getElementById(`svc-${key}-bar`).style.width = s[key] + '%';
+    document.getElementById(`svc-${key}-cost`).textContent = getServiceCost(key);
+    document.getElementById(`svc-${key}-btn`).disabled = state.money < getServiceCost(key) || s[key] >= 100;
+  });
+
+  document.getElementById('svc-corruption-level').textContent = s.corruption + '/100';
+  document.getElementById('svc-corruption-bar').style.width = s.corruption + '%';
+  document.getElementById('svc-corruption-cost').textContent = getCorruptionCost();
+  document.getElementById('svc-corruption-btn').disabled = state.money < getCorruptionCost() || s.corruption <= 0;
+
+  const drain = (s.corruption * 0.04).toFixed(1);
+  const bonus = (s.science * 0.08).toFixed(1);
+  document.getElementById('svc-corruption-desc').textContent =
+    `Коррупция съедает ${drain}% дохода · наука даёт +${bonus}%`;
+}
+
+// ============ ЛОГИСТИКА ============
+function getTechCost(key) {
+  const base = TECH_CFG[key];
+  const lvl = state.tech[key];
+  return Math.round(base * Math.pow(1.35, lvl));
+}
+
+Object.keys(TECH_CFG).forEach(key => {
+  const btn = document.getElementById(`tech-${key}-btn`);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const cost = getTechCost(key);
+    if (state.money < cost || state.tech[key] >= 6) return;
+    state.money -= cost;
+    state.tech[key]++;
+    updateLogisticsPanel();
+  });
+});
+
+document.getElementById('mobilize-btn').addEventListener('click', () => {
+  if (state.tech.mobilization < 1) return;
+  if (state.mobilizeCooldown > 0) return;
+  CITIES.forEach(c => { if (c.owner === state.faction) c.garrison += 1; });
+  state.welfare = Math.max(0, state.welfare - 5);
+  state.mobilizeCooldown = 90;
+  updateLogisticsPanel();
+});
+
+function updateLogisticsPanel() {
+  Object.keys(TECH_CFG).forEach(key => {
+    const lvl = state.tech[key];
+    const cost = getTechCost(key);
+    const lvlEl = document.getElementById(`tech-${key}-level`);
+    const costEl = document.getElementById(`tech-${key}-cost`);
+    const btn = document.getElementById(`tech-${key}-btn`);
+    if (lvlEl) lvlEl.textContent = lvl;
+    if (costEl) costEl.textContent = cost;
+    if (btn) {
+      if (lvl >= 6) {
+        btn.textContent = '✅ Максимум';
+        btn.disabled = true;
+      } else {
+        btn.textContent = 'Вложить';
+        btn.disabled = state.money < cost;
+      }
+    }
+  });
+
+  const mobBtn = document.getElementById('mobilize-btn');
+  if (state.tech.mobilization < 1) {
+    mobBtn.disabled = true;
+    mobBtn.textContent = '📣 Мобилизация недоступна';
+  } else if (state.mobilizeCooldown > 0) {
+    mobBtn.disabled = true;
+    mobBtn.textContent = `⏳ Перезарядка ${Math.ceil(state.mobilizeCooldown)}с`;
+  } else {
+    mobBtn.disabled = false;
+    mobBtn.textContent = '📣 Мобилизация · призыв';
+  }
+}
+
+// ============ ПРОИЗВОДСТВО ============
+function calcResourceProduction() {
+  let ammo = 0, weapons = 0, tanks = 0, fuel = 0;
+  CITIES.forEach(c => {
+    if (c.owner !== state.faction) return;
+    ammo += (c.buildings?.ammoFactory || 0) * 1.2;
+    weapons += (c.buildings?.weaponFactory || 0) * 0.6;
+    tanks += (c.buildings?.tankFactory || 0) * 0.15;
+    fuel += (c.buildings?.oilWell || 0) * 1.0;
+  });
+  return { ammo, weapons, tanks, fuel };
+}
+
+document.getElementById('buy-ammo-btn').addEventListener('click', () => {
+  if (state.money < 120 || state.resources.ammo >= RESOURCE_MAX.ammo) return;
+  state.money -= 120;
+  state.resources.ammo = Math.min(RESOURCE_MAX.ammo, state.resources.ammo + 20);
+  updateProductionPanel();
+});
+document.getElementById('buy-weapons-btn').addEventListener('click', () => {
+  if (state.money < 200 || state.resources.weapons >= RESOURCE_MAX.weapons) return;
+  state.money -= 200;
+  state.resources.weapons = Math.min(RESOURCE_MAX.weapons, state.resources.weapons + 10);
+  updateProductionPanel();
+});
+document.getElementById('buy-tanks-btn').addEventListener('click', () => {
+  if (state.money < 160 || state.resources.tanks >= RESOURCE_MAX.tanks) return;
+  state.money -= 160;
+  state.resources.tanks = Math.min(RESOURCE_MAX.tanks, state.resources.tanks + 1);
+  updateProductionPanel();
+});
+document.getElementById('buy-fuel-btn').addEventListener('click', () => {
+  if (state.money < 160 || state.resources.fuel >= RESOURCE_MAX.fuel) return;
+  state.money -= 160;
+  state.resources.fuel = Math.min(RESOURCE_MAX.fuel, state.resources.fuel + 20);
+  updateProductionPanel();
+});
+
+function updateProductionPanel() {
+  const r = state.resources;
+  const prod = calcResourceProduction();
+
+  document.getElementById('res-ammo-count').textContent = `${Math.floor(r.ammo)}/${RESOURCE_MAX.ammo}`;
+  document.getElementById('res-ammo-prod').textContent = `производство +${prod.ammo.toFixed(2)}/с`;
+  document.getElementById('buy-ammo-btn').disabled = state.money < 120 || r.ammo >= RESOURCE_MAX.ammo;
+
+  document.getElementById('res-weapons-count').textContent = `${Math.floor(r.weapons)}/${RESOURCE_MAX.weapons}`;
+  document.getElementById('res-weapons-prod').textContent = `производство +${prod.weapons.toFixed(2)}/с`;
+  document.getElementById('buy-weapons-btn').disabled = state.money < 200 || r.weapons >= RESOURCE_MAX.weapons;
+
+  document.getElementById('res-tanks-count').textContent = `${Math.floor(r.tanks)}/${RESOURCE_MAX.tanks}`;
+  document.getElementById('res-tanks-prod').textContent = prod.tanks > 0
+    ? `производство +${prod.tanks.toFixed(2)}/с` : 'производство 0';
+  document.getElementById('buy-tanks-btn').disabled = state.money < 160 || r.tanks >= RESOURCE_MAX.tanks;
+
+  document.getElementById('res-fuel-count').textContent = `${Math.floor(r.fuel)}/${RESOURCE_MAX.fuel}`;
+  document.getElementById('res-fuel-prod').textContent = `производство +${prod.fuel.toFixed(2)}/с`;
+  document.getElementById('buy-fuel-btn').disabled = state.money < 160 || r.fuel >= RESOURCE_MAX.fuel;
+
+  const totals = { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 };
+  CITIES.forEach(c => {
+    if (c.owner !== state.faction) return;
+    Object.keys(totals).forEach(k => totals[k] += (c.buildings?.[k] || 0));
+  });
+  document.getElementById('bld-mine-total').textContent = totals.mine;
+  document.getElementById('bld-factory-total').textContent = totals.factory;
+  document.getElementById('bld-ammo-total').textContent = totals.ammoFactory;
+  document.getElementById('bld-weapon-total').textContent = totals.weaponFactory;
+  document.getElementById('bld-tank-total').textContent = totals.tankFactory;
+  document.getElementById('bld-oil-total').textContent = totals.oilWell;
+}
+
+// ============ СТРОИТЕЛЬСТВО ============
+let buildCity = null;
+
+function getBuildingCost(city, key) {
+  const base = BUILDINGS_CFG[key].cost;
+  const count = city.buildings[key] || 0;
+  return Math.round(base * Math.pow(1.10, count));
+}
+
+function openBuildModal(city) {
+  buildCity = city;
+  const modal = document.getElementById('build-modal');
+  const title = document.getElementById('build-modal-title');
+  const body = document.getElementById('build-modal-body');
+  const lang = state.settings.language;
+
+  title.textContent = `Строительство · ${city.name}`;
+  body.innerHTML = '';
+
+  Object.keys(BUILDINGS_CFG).forEach(key => {
+    const b = BUILDINGS_CFG[key];
+    const count = city.buildings[key] || 0;
+    const cost = getBuildingCost(city, key);
+    const canBuild = count < MAX_BUILDINGS && state.money >= cost;
+
+    const row = document.createElement('div');
+    row.className = 'build-row';
+    row.innerHTML = `
+      <div class="build-info">
+        <div class="build-name">${b[lang]}</div>
+        <div class="build-count">Построено: ${count}/${MAX_BUILDINGS}</div>
+      </div>
+      <button class="build-action" data-key="${key}" ${canBuild ? '' : 'disabled'}>💰 ${cost}</button>
+    `;
+    body.appendChild(row);
+  });
+
+  body.querySelectorAll('.build-action').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const cost = getBuildingCost(buildCity, key);
+      if (state.money < cost) return;
+      if (buildCity.buildings[key] >= MAX_BUILDINGS) return;
+      state.money -= cost;
+      buildCity.buildings[key]++;
+      openBuildModal(buildCity);
+    });
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function closeBuildModal() {
+  document.getElementById('build-modal').classList.add('hidden');
+  buildCity = null;
+}
+
+document.getElementById('build-modal-close').addEventListener('click', closeBuildModal);
 
 // ============ ИГРОВОЙ ЦИКЛ ============
 let lastTime = performance.now();
@@ -860,18 +1155,25 @@ function loop(now) {
   let dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
 
-  if (!state.paused && !state.gameOver) {
-    update(dt * state.timeScale);
-  }
+  if (!state.paused && !state.gameOver) update(dt * state.timeScale);
   updateHUD();
   renderMap();
+
+  const actionsModal = document.getElementById('actions-modal');
+  if (!actionsModal.classList.contains('hidden')) {
+    const active = document.querySelector('.actions-tab.active');
+    if (active) {
+      if (active.dataset.tab === 'country') updateActionsPanel();
+      if (active.dataset.tab === 'services') updateServicesPanel();
+      if (active.dataset.tab === 'logistics') updateLogisticsPanel();
+      if (active.dataset.tab === 'production') updateProductionPanel();
+    }
+  }
 
   if (state.gameOver && !state.gameOverShown) {
     state.gameOverShown = true;
     document.getElementById('gameover-title').textContent =
-      state.gameOverReason === 'victory'
-        ? (state.settings.language === 'ru' ? '🏆 Победа' : '🏆 Victory')
-        : (state.settings.language === 'ru' ? '💀 Поражение' : '💀 Defeat');
+      state.gameOverReason === 'victory' ? '🏆 Победа' : '💀 Поражение';
     document.getElementById('gameover-text').textContent = state.gameOverText || '';
     document.getElementById('gameover-modal').classList.remove('hidden');
   }
@@ -880,72 +1182,87 @@ function loop(now) {
 }
 
 function calcIncome() {
-  const taxIncome = BALANCE.baseTaxIncome * (state.satisfaction / 100) * (1 - state.corruption / 100);
+  const laborForce = state.population * 0.60;
+  const army = state.army || (laborForce * 0.43);
+  const workers = laborForce - army;
+
+  const taxMult = 1 + state.taxRate;
+  const workersMult = Math.max(0.1, workers / (laborForce * 0.85));
+  const welfareMult = Math.max(0.1, state.welfare / 60);
+  const scienceMult = 1 + (state.services.science / 100) * 0.25;
+  const corruptionMult = 1 - (state.services.corruption / 100) * 0.04;
+  const economyMult = 1 + state.tech.economy * 0.20;
+  const logisticsMult = 1 + state.tech.logistics * 0.10;
+
   let cityIncome = 0;
   CITIES.forEach(c => {
     if (c.owner !== state.faction) return;
-    cityIncome += c.baseIncome * (c.infrastructure / 100) * (state.satisfaction / 100) * (1 - state.corruption / 100);
+    const mine = (c.buildings?.mine || 0) * 4;
+    const factory = (c.buildings?.factory || 0) * 2.5;
+    cityIncome += c.baseIncome * (c.infrastructure / 100) + mine + factory;
   });
-  return taxIncome + cityIncome;
+
+  return cityIncome * taxMult * workersMult * welfareMult * scienceMult * corruptionMult * economyMult * logisticsMult;
 }
 
 function update(dt) {
   state.money += calcIncome() * dt;
 
-  let popDelta = 0;
-  if (state.satisfaction > 60) popDelta += BALANCE.basePopulationGrowth * ((state.satisfaction - 60) / 40);
-  else if (state.satisfaction < 30) popDelta -= BALANCE.basePopulationGrowth * ((30 - state.satisfaction) / 30);
+  // Ресурсы — производство
+  const prod = calcResourceProduction();
+  state.resources.ammo = Math.min(RESOURCE_MAX.ammo, Math.max(0, state.resources.ammo + (prod.ammo - 0.56) * dt));
+  state.resources.weapons = Math.min(RESOURCE_MAX.weapons, state.resources.weapons + prod.weapons * dt);
+  state.resources.tanks = Math.min(RESOURCE_MAX.tanks, state.resources.tanks + prod.tanks * dt);
+  state.resources.fuel = Math.min(RESOURCE_MAX.fuel, Math.max(0, state.resources.fuel + (prod.fuel - 0.40) * dt));
 
-  CITIES.forEach(c => {
-    if (c.owner !== state.faction) return;
-    popDelta += c.basePop * 0.1 * (state.satisfaction / 100);
-  });
-  state.population = Math.max(0, state.population + popDelta * dt);
+  // Население
+  const birthRate = 8.0 + state.tech.birth * 1.2;
+  const deathRate = 13.0;
+  const popDelta = state.population * (birthRate - deathRate) / 1000 / 86400;
+  state.population = Math.max(1e6, state.population + popDelta * dt);
 
-  let satDelta = 0;
-  if (state.corruption > 50) satDelta -= 0.4 * ((state.corruption - 50) / 50);
-  if (satDelta < 0) satDelta *= (1 + state.corruption / 100);
-  state.satisfaction = Math.max(0, Math.min(100, state.satisfaction + satDelta * dt));
+  // Благосостояние
+  let welfareDelta = -0.05;
+  if (state.taxRate > 0.30) welfareDelta -= (state.taxRate - 0.30) * 2;
+  if (state.taxRate < 0.20) welfareDelta += (0.20 - state.taxRate) * 1.5;
+  welfareDelta += state.tech.life * 0.07;
+  state.welfare = Math.max(0, Math.min(100, state.welfare + welfareDelta * dt));
+  state.welfareTrend = welfareDelta;
 
-  state.corruption = Math.max(0, Math.min(100, state.corruption + (0.05 - 0.02) * dt));
+  // Коррупция
+  let corruptionDelta = 0.05;
+  corruptionDelta -= (state.services.science / 100) * 0.02;
+  corruptionDelta -= (state.services.order / 100) * 0.03;
+  state.services.corruption = Math.max(0, Math.min(100, state.services.corruption + corruptionDelta * dt));
+
+  // КД мобилизации
+  if (state.mobilizeCooldown > 0) state.mobilizeCooldown = Math.max(0, state.mobilizeCooldown - dt);
 
   updateAttacks(dt);
 
-  if (state.satisfaction <= 0) {
+  if (state.welfare <= 0) {
     state.gameOver = true;
     state.gameOverReason = 'defeat';
-    state.gameOverText = state.settings.language === 'ru' ? 'Переворот. Вы свергнуты.' : 'Coup. You are overthrown.';
+    state.gameOverText = 'Переворот. Вы свергнуты.';
     return;
   }
-  if (state.satisfaction < BALANCE.coupWarningThreshold) {
-    if (state.coupTimer === null) state.coupTimer = BALANCE.coupTimerSeconds;
-    else if ((state.coupTimer -= dt) <= 0) {
-      state.gameOver = true;
-      state.gameOverReason = 'defeat';
-      state.gameOverText = state.settings.language === 'ru' ? 'Переворот. Вы свергнуты.' : 'Coup. You are overthrown.';
-    }
-  } else state.coupTimer = null;
 
   checkVictory();
 }
 
 function checkVictory() {
   if (state.gameOver) return;
-  const playerCapital = CITIES.find(c => c.type === 'capital' && c.owner === state.faction);
-  const enemyCapital = CITIES.find(c => c.type === 'capital' && c.owner === state.enemyFaction);
+  const playerCap = CITIES.find(c => c.type === 'capital' && c.owner === state.faction);
+  const enemyCap = CITIES.find(c => c.type === 'capital' && c.owner === state.enemyFaction);
 
-  if (!enemyCapital) {
+  if (!enemyCap) {
     state.gameOver = true;
     state.gameOverReason = 'victory';
-    state.gameOverText = state.settings.language === 'ru'
-      ? '🏆 ПОБЕДА! Столица врага захвачена.'
-      : '🏆 VICTORY! Enemy capital captured.';
-  } else if (!playerCapital) {
+    state.gameOverText = '🏆 ПОБЕДА! Столица врага захвачена.';
+  } else if (!playerCap) {
     state.gameOver = true;
     state.gameOverReason = 'defeat';
-    state.gameOverText = state.settings.language === 'ru'
-      ? '💀 ПОРАЖЕНИЕ. Ваша столица пала.'
-      : '💀 DEFEAT. Your capital has fallen.';
+    state.gameOverText = '💀 ПОРАЖЕНИЕ. Ваша столица пала.';
   }
 }
 
@@ -960,17 +1277,17 @@ function updateHUD() {
   incEl.classList.toggle('positive', income > 0);
   incEl.classList.toggle('negative', income < 0);
 
-  document.getElementById('population').textContent = fmt(state.population);
+  document.getElementById('population').textContent = (state.population / 1e6).toFixed(0) + 'м';
 
   const satEl = document.getElementById('satisfaction');
-  satEl.textContent = Math.floor(state.satisfaction) + '%';
+  satEl.textContent = Math.floor(state.welfare) + '%';
   satEl.classList.remove('sat-good', 'sat-mid', 'sat-bad');
-  satEl.classList.add(state.satisfaction > 60 ? 'sat-good' : state.satisfaction > 30 ? 'sat-mid' : 'sat-bad');
+  satEl.classList.add(state.welfare > 60 ? 'sat-good' : state.welfare > 30 ? 'sat-mid' : 'sat-bad');
 
   const corEl = document.getElementById('corruption');
-  corEl.textContent = Math.floor(state.corruption) + '%';
+  corEl.textContent = Math.floor(state.services.corruption) + '%';
   corEl.classList.remove('cor-good', 'cor-mid', 'cor-bad');
-  corEl.classList.add(state.corruption < 30 ? 'cor-good' : state.corruption < 60 ? 'cor-mid' : 'cor-bad');
+  corEl.classList.add(state.services.corruption < 30 ? 'cor-good' : state.services.corruption < 60 ? 'cor-mid' : 'cor-bad');
 }
 
 // ============ РЕНДЕР ============
@@ -983,12 +1300,7 @@ function renderMap() {
   ctx.fillStyle = '#0a0e1a';
   ctx.fillRect(0, 0, w, h);
 
-  ctx.drawImage(
-    worldCanvas,
-    camera.x, camera.y,
-    w / camera.zoom, h / camera.zoom,
-    0, 0, w, h
-  );
+  ctx.drawImage(worldCanvas, camera.x, camera.y, w / camera.zoom, h / camera.zoom, 0, 0, w, h);
 
   renderRoads();
   renderAttacks();
@@ -1001,7 +1313,6 @@ function renderRoads() {
 
   ROADS.forEach(road => {
     const a = road.from, b = road.to;
-
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
     const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
@@ -1010,13 +1321,12 @@ function renderRoads() {
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
 
-    const color = road.type === 'own'    ? 'rgba(0, 212, 255, 0.4)'
-                : road.type === 'enemy'  ? 'rgba(255, 59, 92, 0.4)'
+    const color = road.type === 'own' ? 'rgba(0, 212, 255, 0.4)'
+                : road.type === 'enemy' ? 'rgba(255, 59, 92, 0.4)'
                 : 'rgba(180, 190, 210, 0.35)';
 
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
-
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -1026,15 +1336,12 @@ function renderRoads() {
 
 function renderAttacks() {
   const tileSize = MAP.TILE * camera.zoom;
-
   ACTIVE_ATTACKS.forEach(atk => {
     const a = atk.from, b = atk.to;
-
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
     const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
-
     const cx = x1 + (x2 - x1) * atk.progress;
     const cy = y1 + (y2 - y1) * atk.progress;
 
@@ -1049,7 +1356,6 @@ function renderAttacks() {
     ctx.globalAlpha = 1;
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 14;
-    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(cx, cy);
@@ -1074,22 +1380,17 @@ function renderCities() {
   CITIES.forEach(c => {
     const sx = (c.x * MAP.TILE - camera.x) * camera.zoom;
     const sy = (c.y * MAP.TILE - camera.y) * camera.zoom;
-
     if (sx < -100 || sx > rect.width + 100 || sy < -100 || sy > rect.height + 100) return;
 
     const color = c.owner === 'aurora' ? '#00d4ff'
-                : c.owner === 'vesper' ? '#ff3b5c'
-                : '#8892a6';
+                : c.owner === 'vesper' ? '#ff3b5c' : '#8892a6';
 
-    const radiusRatio = c.type === 'capital' ? 0.32
-                      : c.type === 'large' ? 0.24
-                      : c.type === 'medium' ? 0.18
-                      : 0.13;
+    const radiusRatio = c.type === 'capital' ? 0.32 : c.type === 'large' ? 0.24
+                      : c.type === 'medium' ? 0.18 : 0.13;
     const radius = Math.max(3, tileSize * radiusRatio);
 
     ctx.shadowColor = color;
     ctx.shadowBlur = c.type === 'capital' ? 24 : 12;
-
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius, 0, Math.PI * 2);
@@ -1101,6 +1402,20 @@ function renderCities() {
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
+    // Иконка укрепления
+    if (c.fortification > 0 && camera.zoom > 0.7) {
+      const fort = FORTIFICATIONS[c.fortification];
+      ctx.font = `${Math.max(12, 16 * camera.zoom)}px sans-serif`;
+      ctx.fillText(fort.icon, sx + tileSize / 2, sy + tileSize / 2 - radius - 8);
+    }
+
+    // Стратегический объект
+    const bTotal = Object.values(c.buildings || {}).reduce((a, b) => a + b, 0);
+    if (bTotal >= 5 && camera.zoom > 0.7) {
+      ctx.font = `${Math.max(12, 14 * camera.zoom)}px sans-serif`;
+      ctx.fillText('⚠️', sx + tileSize / 2 + radius + 6, sy + tileSize / 2 - radius);
+    }
+
     if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
     const fontSize = Math.max(9,
@@ -1108,11 +1423,10 @@ function renderCities() {
     );
     ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
     ctx.textBaseline = 'top';
-
     const textX = sx + tileSize / 2;
     const textY = sy + tileSize / 2 + radius + 4;
-
     const textWidth = ctx.measureText(c.name).width;
+
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(textX - textWidth / 2 - 3, textY - 1, textWidth + 6, fontSize + 2);
 
@@ -1129,11 +1443,14 @@ function startGame() {
   state.difficulty = s.difficulty;
 
   const f = FACTIONS[state.faction];
-  Object.assign(state, f.start);
+  state.money = f.start.money;
+  state.welfare = f.start.welfare;
+  state.population = f.start.population;
+  state.taxRate = f.start.taxRate;
 
   const d = DIFFICULTY[state.difficulty];
   state.money *= d.playerMoneyMult;
-  state.satisfaction -= d.playerSatPenalty;
+  state.welfare -= d.playerSatPenalty;
 
   if (tg) {
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
@@ -1142,11 +1459,9 @@ function startGame() {
 
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
-
   document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
 
   seed = 12345;
-  generateMap();
   generateCities();
   generateRoads();
   generateWorldCanvas();
@@ -1180,9 +1495,7 @@ document.getElementById('pause-btn').addEventListener('click', e => {
 document.getElementById('zoom-in').addEventListener('click', () => zoomByCenter(1.25));
 document.getElementById('zoom-out').addEventListener('click', () => zoomByCenter(1 / 1.25));
 
-document.getElementById('city-list-btn').addEventListener('click', () => {
-  centerOnPlayerBase();
-});
+document.getElementById('city-list-btn').addEventListener('click', () => centerOnPlayerBase());
 
 document.getElementById('gameover-restart').addEventListener('click', () => {
   state.gameOver = false;
