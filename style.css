@@ -1,0 +1,236 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden { display: none !important; }
+
+/* ===== МЕНЮ ===== */
+#menu {
+  overflow-y: auto;
+  padding: 20px 16px;
+  align-items: center;
+}
+
+.menu-container {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: auto 0;
+}
+
+.game-title {
+  text-align: center;
+  font-size: 24px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+.game-subtitle {
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: -12px;
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.opt-btn {
+  flex: 1;
+  min-width: 70px;
+  padding: 10px 12px;
+  background: #0f3460;
+  color: #cbd5e1;
+  border: 2px solid #1e3a5f;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.opt-btn.selected {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #60a5fa;
+}
+
+.opt-btn:active { transform: scale(0.97); }
+
+/* Карточки фракций */
+.faction-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.faction-card {
+  padding: 12px;
+  background: #0f3460;
+  border: 2px solid #1e3a5f;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.faction-card.selected {
+  border-color: #60a5fa;
+  background: #1e3a5f;
+  box-shadow: 0 0 0 2px #3b82f6 inset;
+}
+
+.faction-card[data-faction="aurora"].selected { border-color: #3b82f6; }
+.faction-card[data-faction="vesper"].selected { border-color: #dc2626; box-shadow: 0 0 0 2px #dc2626 inset; }
+
+.faction-flag { font-size: 32px; margin-bottom: 6px; }
+
+.faction-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.faction-traits {
+  list-style: none;
+  text-align: left;
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+/* Кнопка старта */
+#start-btn {
+  margin-top: 8px;
+  padding: 16px;
+  background: #4ade80;
+  color: #0f172a;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#start-btn:disabled {
+  background: #1e3a5f;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+#start-btn:not(:disabled):active { transform: scale(0.98); }
+
+/* ===== HUD (игровой экран) ===== */
+#hud {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #16213e;
+  border-bottom: 1px solid #0f3460;
+  font-size: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  background: #0f3460;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stat .icon { font-size: 15px; }
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.stat .value { font-weight: bold; font-size: 12px; color: #fff; }
+.stat .sub { font-size: 9px; color: #94a3b8; }
+
+#satisfaction.sat-good { color: #4ade80; }
+#satisfaction.sat-mid { color: #facc15; }
+#satisfaction.sat-bad { color: #dc2626; }
+
+#corruption.cor-good { color: #4ade80; }
+#corruption.cor-mid { color: #facc15; }
+#corruption.cor-bad { color: #dc2626; }
+
+#income.positive { color: #4ade80; }
+#income.negative { color: #dc2626; }
+
+.controls { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; }
+
+.speed-btn, #pause-btn {
+  background: #0f3460;
+  color: #94a3b8;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.speed-btn.active {
+  background: #4ade80;
+  color: #0f172a;
+  border-color: #4ade80;
+}
+
+#pause-btn.paused {
+  background: #facc15;
+  color: #0f172a;
+  border-color: #facc15;
+}
+
+#game {
+  width: 100%;
+  height: 100%;
+  display: block;
+  flex: 1;
+}

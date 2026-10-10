@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Литийная Дуга</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ===== МЕНЮ ===== -->
+  <div id="menu" class="screen">
+    <div class="menu-container">
+      <h1 class="game-title">⚔️ ЛИТИЙНАЯ ДУГА</h1>
+      <p class="game-subtitle">RTS о борьбе за ресурс будущего</p>
+
+      <!-- Язык -->
+      <div class="menu-section">
+        <div class="section-label">🌍 <span data-i18n="language">Язык</span></div>
+        <div class="row">
+          <button class="opt-btn lang-btn selected" data-lang="ru">🇷🇺 Русский</button>
+          <button class="opt-btn lang-btn" data-lang="en">🇬🇧 English</button>
+        </div>
+      </div>
+
+      <!-- Сторона -->
+      <div class="menu-section">
+        <div class="section-label">⚔️ <span data-i18n="faction">Сторона</span></div>
+        <div class="faction-row">
+          <div class="faction-card" data-faction="aurora">
+            <div class="faction-flag">🟦</div>
+            <div class="faction-name" data-i18n="auroraName">Республика Аврора</div>
+            <ul class="faction-traits">
+              <li>🏛️ <span data-i18n="democracy">Демократия</span></li>
+              <li>💰 <span data-i18n="weakEcon">Слабая экономика</span></li>
+              <li>😊 <span data-i18n="freeSociety">Свободное общество</span></li>
+              <li>⚔️ <span data-i18n="qualityArmy">Качественная армия</span></li>
+            </ul>
+          </div>
+          <div class="faction-card" data-faction="vesper">
+            <div class="faction-flag">🟥</div>
+            <div class="faction-name" data-i18n="vesperName">Доминион Веспер</div>
+            <ul class="faction-traits">
+              <li>👑 <span data-i18n="autocracy">Автократия</span></li>
+              <li>💰 <span data-i18n="richEcon">Богатая экономика</span></li>
+              <li>😐 <span data-i18n="scaredSociety">Запуганное общество</span></li>
+              <li>⚔️ <span data-i18n="massArmy">Массовая армия</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Сложность -->
+      <div class="menu-section">
+        <div class="section-label">🎚️ <span data-i18n="difficulty">Сложность</span></div>
+        <div class="row">
+          <button class="opt-btn diff-btn" data-diff="easy">🟢 <span data-i18n="easy">Легко</span></button>
+          <button class="opt-btn diff-btn selected" data-diff="normal">🟡 <span data-i18n="normal">Норма</span></button>
+          <button class="opt-btn diff-btn" data-diff="hard">🔴 <span data-i18n="hard">Сложно</span></button>
+          <button class="opt-btn diff-btn" data-diff="insane">💀 <span data-i18n="insane">Хардкор</span></button>
+        </div>
+      </div>
+
+      <!-- Старт -->
+      <button id="start-btn" disabled>
+        ▶ <span data-i18n="startGame">Начать игру</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== ИГРА ===== -->
+  <div id="game-screen" class="screen hidden">
+    <div id="hud">
+      <div class="stat">
+        <span class="icon">💰</span>
+        <div class="stat-body">
+          <span class="value" id="money">0</span>
+          <span class="sub" id="income">+0.0/с</span>
+        </div>
+      </div>
+      <div class="stat">
+        <span class="icon">👥</span>
+        <div class="stat-body">
+          <span class="value" id="population">0</span>
+          <span class="sub" data-i18n="population">население</span>
+        </div>
+      </div>
+      <div class="stat">
+        <span class="icon">😊</span>
+        <div class="stat-body">
+          <span class="value" id="satisfaction">0%</span>
+          <span class="sub" data-i18n="satisfaction">довольность</span>
+        </div>
+      </div>
+      <div class="stat">
+        <span class="icon">🕳️</span>
+        <div class="stat-body">
+          <span class="value" id="corruption">0%</span>
+          <span class="sub" data-i18n="corruption">коррупция</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="speed-btn" data-speed="1">×1</button>
+        <button class="speed-btn" data-speed="2">×2</button>
+        <button class="speed-btn" data-speed="4">×4</button>
+        <button id="pause-btn">⏸</button>
+      </div>
+    </div>
+    <canvas id="game"></canvas>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
