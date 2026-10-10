@@ -97,7 +97,7 @@
         <div class="city-stat"><span data-i18n="cityIncome">Доход:</span><span id="city-income">+0.0/с</span></div>
       </div>
       <div class="city-panel-actions">
-        <button id="city-attack-btn" class="action-btn" data-i18n="attackBtn">⚔️ Наступление</button>
+        <button id="city-attack-btn" class="action-btn">⚔️ Наступление</button>
       </div>
     </div>
 
@@ -107,6 +107,14 @@
         <button id="attack-target-close">✕</button>
       </div>
       <div class="city-panel-body" id="attack-targets"></div>
+    </div>
+
+    <div id="attack-sources-panel" class="city-panel hidden">
+      <div class="city-panel-header">
+        <span data-i18n="chooseSource">Откуда атаковать?</span>
+        <button id="attack-sources-close">✕</button>
+      </div>
+      <div class="city-panel-body" id="attack-sources-list"></div>
     </div>
 
     <div id="gameover-modal" class="modal hidden">

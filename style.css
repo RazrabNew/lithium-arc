@@ -380,7 +380,7 @@ body {
   box-shadow: none;
 }
 
-#attack-targets {
+#attack-targets, #attack-sources-list {
   max-height: 40vh;
   overflow-y: auto;
 }

@@ -35,11 +35,11 @@ const LANG = {
     diffEasy: 'Спокойное знакомство. ИИ медлит.', diffNormal: 'Сбалансированная игра.',
     diffHard: 'ИИ агрессивнее и богаче.', diffInsane: 'Максимальное давление.',
     aiIncome: 'Доход ИИ', aiUnits: 'Сила ИИ', playerMoney: 'Ваши деньги', playerSat: 'Старт. довольность',
-    chooseTarget: 'Выберите цель', backToMenu: 'В меню',
+    chooseTarget: 'Выберите цель', chooseSource: 'Откуда атаковать?', backToMenu: 'В меню',
     ownerAurora: 'Аврора', ownerVesper: 'Веспер', ownerNeutral: 'Нейтрал',
     typeCapital: 'Столица', typeLarge: 'Крупный', typeMedium: 'Средний', typeSmall: 'Малый',
     cityOwner: 'Владелец:', cityType: 'Тип:', cityGarrison: 'Гарнизон:',
-    cityInfra: 'Инфраструктура:', cityIncome: 'Доход:', attackBtn: '⚔️ Наступление',
+    cityInfra: 'Инфраструктура:', cityIncome: 'Доход:',
   },
   en: {
     gameTitle: 'LITHIUM ARC', gameSubtitle: 'Real-time strategy for the resource of the future',
@@ -50,11 +50,11 @@ const LANG = {
     diffEasy: 'A calm introduction.', diffNormal: 'Balanced game.',
     diffHard: 'AI is more aggressive and richer.', diffInsane: 'Maximum pressure.',
     aiIncome: 'AI income', aiUnits: 'AI power', playerMoney: 'Your money', playerSat: 'Start satisfaction',
-    chooseTarget: 'Choose target', backToMenu: 'Back to menu',
+    chooseTarget: 'Choose target', chooseSource: 'Attack from where?', backToMenu: 'Back to menu',
     ownerAurora: 'Aurora', ownerVesper: 'Vesper', ownerNeutral: 'Neutral',
     typeCapital: 'Capital', typeLarge: 'Large', typeMedium: 'Medium', typeSmall: 'Small',
     cityOwner: 'Owner:', cityType: 'Type:', cityGarrison: 'Garrison:',
-    cityInfra: 'Infrastructure:', cityIncome: 'Income:', attackBtn: '⚔️ Attack',
+    cityInfra: 'Infrastructure:', cityIncome: 'Income:',
   },
 };
 
@@ -103,7 +103,6 @@ function rand() {
   return seed / 233280;
 }
 
-// Кэш шума для тайлов
 const tileNoise = new Map();
 function getTileNoise(x, y) {
   const key = x + ',' + y;
@@ -226,7 +225,6 @@ function generateMap() {
     map.push(row);
   }
 
-  // Рамка из гор
   for (let y = 0; y < MAP.H; y++) {
     for (let x = 0; x < MAP.W; x++) {
       if (x === 0 || y === 0 || x === MAP.W - 1 || y === MAP.H - 1) {
@@ -235,7 +233,6 @@ function generateMap() {
     }
   }
 
-  // Горы — 8 кластеров
   for (let i = 0; i < 8; i++) {
     const cx = 4 + Math.floor(rand() * (MAP.W - 8));
     const cy = 4 + Math.floor(rand() * (MAP.H - 8));
@@ -255,7 +252,6 @@ function generateMap() {
     }
   }
 
-  // Извилистая река по центру
   let rx = 19;
   for (let y = 1; y < MAP.H - 1; y++) {
     rx += Math.floor(rand() * 3) - 1;
@@ -264,7 +260,6 @@ function generateMap() {
     if (rand() < 0.3 && map[y] && map[y][rx + 1] !== undefined) map[y][rx + 1] = TILE.WATER;
   }
 
-  // Трава
   for (let i = 0; i < 15; i++) {
     const cx = Math.floor(rand() * MAP.W);
     const cy = Math.floor(rand() * MAP.H);
@@ -364,6 +359,7 @@ function generateRoads() {
   ROADS = [];
   const seen = new Set();
 
+  // === 1. Внутренние дороги каждой фракции ===
   CITIES.forEach(city => {
     const neighbors = CITIES
       .filter(c => c !== city)
@@ -385,17 +381,45 @@ function generateRoads() {
 
       const key = [CITIES.indexOf(city), CITIES.indexOf(neighbor)].sort().join('-');
       if (seen.has(key)) { links++; continue; }
+
+      if (city.owner !== neighbor.owner) continue;
+
+      seen.add(key);
+      ROADS.push({
+        from: city,
+        to: neighbor,
+        type: city.owner === 'aurora' ? 'own' : 'enemy',
+      });
+      links++;
+    }
+  });
+
+  // === 2. Межфракционные дороги (граница) ===
+  const auroraCities = CITIES.filter(c => c.owner === 'aurora');
+  const vesperCities = CITIES.filter(c => c.owner === 'vesper');
+
+  auroraCities.forEach(aCity => {
+    const enemyNeighbors = vesperCities
+      .map(v => ({ city: v, dist: Math.hypot(v.x - aCity.x, v.y - aCity.y) }))
+      .sort((a, b) => a.dist - b.dist);
+
+    let borderLinks = 0;
+    const maxBorderLinks = aCity.type === 'capital' ? 2 : 1;
+
+    for (const { city: vCity, dist } of enemyNeighbors) {
+      if (borderLinks >= maxBorderLinks) break;
+      if (dist > 12) break;
+
+      const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
+      if (seen.has(key)) continue;
       seen.add(key);
 
-      let type;
-      if (city.owner === neighbor.owner) {
-        type = city.owner === 'aurora' ? 'own' : 'enemy';
-      } else {
-        type = 'contested';
-      }
-
-      ROADS.push({ from: city, to: neighbor, type });
-      links++;
+      ROADS.push({
+        from: aCity,
+        to: vCity,
+        type: 'border',
+      });
+      borderLinks++;
     }
   });
 }
@@ -483,7 +507,6 @@ function initCameraControls() {
     camera.dragging = false;
   });
 
-  // Зум колёсиком
   canvas.addEventListener('wheel', e => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
@@ -603,6 +626,7 @@ function handleCanvasClick(clientX, clientY) {
   } else {
     closeCityPanel();
     closeAttackTargetPanel();
+    closeAttackSourcesPanel();
   }
 }
 
@@ -626,11 +650,37 @@ function openCityPanel(city) {
   document.getElementById('city-garrison').textContent = city.garrison;
   document.getElementById('city-infra').textContent = city.infrastructure + '%';
 
-  const income = city.baseIncome * (city.infrastructure / 100) * (state.satisfaction / 100);
-  document.getElementById('city-income').textContent = '+' + income.toFixed(2) + '/с';
+  const isOwn = city.owner === state.faction;
+  const income = isOwn
+    ? city.baseIncome * (city.infrastructure / 100) * (state.satisfaction / 100)
+    : 0;
+  document.getElementById('city-income').textContent = isOwn
+    ? '+' + income.toFixed(2) + '/с'
+    : '—';
 
   const attackBtn = document.getElementById('city-attack-btn');
-  attackBtn.disabled = !(city.owner === state.faction && city.garrison > 0);
+
+  if (isOwn) {
+    attackBtn.textContent = '⚔️ ' + (state.settings.language === 'ru' ? 'Наступление' : 'Attack');
+    attackBtn.disabled = city.garrison < 1;
+    attackBtn.onclick = () => openAttackTargetPanel();
+  } else {
+    const sources = getRoadsFrom(city).filter(c =>
+      c.owner === state.faction && c.garrison > 0
+    );
+
+    if (sources.length > 0) {
+      attackBtn.textContent = '⚔️ ' + (state.settings.language === 'ru' ? 'Наступление' : 'Attack');
+      attackBtn.disabled = false;
+      attackBtn.onclick = () => openAttackSourcesPanel(city, sources);
+    } else {
+      attackBtn.textContent = '🚫 ' + (state.settings.language === 'ru'
+        ? 'Нет доступных атак'
+        : 'No available attacks');
+      attackBtn.disabled = true;
+      attackBtn.onclick = null;
+    }
+  }
 }
 
 function closeCityPanel() {
@@ -640,7 +690,7 @@ function closeCityPanel() {
 
 document.getElementById('city-panel-close').addEventListener('click', closeCityPanel);
 
-// ============ ПАНЕЛЬ ЦЕЛЕЙ ============
+// ============ ПАНЕЛЬ ЦЕЛЕЙ (свой город) ============
 function openAttackTargetPanel() {
   if (!selectedCity) return;
   const dict = LANG[state.settings.language];
@@ -653,7 +703,7 @@ function openAttackTargetPanel() {
     .filter(c => c.owner !== state.faction);
 
   if (targets.length === 0) {
-    list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:10px">Нет доступных целей</div>';
+    list.innerHTML = `<div style="color:#64748b;font-size:12px;padding:10px">${state.settings.language === 'ru' ? 'Нет доступных целей' : 'No targets available'}</div>`;
     return;
   }
 
@@ -680,8 +730,39 @@ function closeAttackTargetPanel() {
   document.getElementById('attack-target-panel').classList.add('hidden');
 }
 
-document.getElementById('city-attack-btn').addEventListener('click', openAttackTargetPanel);
 document.getElementById('attack-target-close').addEventListener('click', closeAttackTargetPanel);
+
+// ============ ПАНЕЛЬ ИСТОЧНИКОВ (вражеский город) ============
+function openAttackSourcesPanel(targetCity, sources) {
+  const panel = document.getElementById('attack-sources-panel');
+  const list = document.getElementById('attack-sources-list');
+  panel.classList.remove('hidden');
+  list.innerHTML = '';
+
+  sources.forEach(source => {
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.innerHTML = `
+      <div>
+        <div class="target-name">${source.name}</div>
+        <div class="target-info">🛡️ ${source.garrison}</div>
+      </div>
+      <div class="target-info">→ ${targetCity.name}</div>
+    `;
+    row.addEventListener('click', () => {
+      launchAttack(source, targetCity);
+      closeAttackSourcesPanel();
+      closeCityPanel();
+    });
+    list.appendChild(row);
+  });
+}
+
+function closeAttackSourcesPanel() {
+  document.getElementById('attack-sources-panel').classList.add('hidden');
+}
+
+document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
 // ============ НАСТУПЛЕНИЕ ============
 function launchAttack(fromCity, toCity) {
@@ -719,7 +800,6 @@ function resolveAttack(fromCity, toCity, units) {
     toCity.garrison = Math.max(0, units - losses);
     state.satisfaction -= 5;
   } else {
-    const attackerLosses = Math.ceil(attackPower * 0.7);
     toCity.garrison = Math.max(0, toCity.garrison - Math.ceil(attackPower * 0.5));
     state.satisfaction -= 8;
   }
@@ -968,9 +1048,10 @@ function renderRoads() {
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
 
-    const color = road.type === 'own' ? '#00d4ff'
-                : road.type === 'enemy' ? '#ff3b5c'
-                : '#facc15';
+    const color = road.type === 'own'    ? '#00d4ff'
+                : road.type === 'enemy'  ? '#ff3b5c'
+                : road.type === 'border' ? '#8892a6'
+                : '#8892a6';
 
     const lineWidth = Math.max(1, 1.5 * camera.zoom);
     const dash = Math.max(3, 5 * camera.zoom);
@@ -978,7 +1059,7 @@ function renderRoads() {
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     ctx.setLineDash([dash, dash]);
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.5;
 
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -1105,7 +1186,6 @@ function startGame() {
   state.money *= d.playerMoneyMult;
   state.satisfaction -= d.playerSatPenalty;
 
-  // Блокировка сворачивания
   if (tg) {
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
     if (tg.disableSwipes) tg.disableSwipes();
@@ -1117,6 +1197,7 @@ function startGame() {
   document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
 
   seed = 12345;
+  tileNoise.clear();
   generateMap();
   generateCities();
   generateRoads();
