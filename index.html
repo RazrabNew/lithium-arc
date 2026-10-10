@@ -69,6 +69,21 @@
         <div class="stat"><span class="icon">😊</span><span class="value" id="satisfaction">0%</span></div>
         <div class="stat"><span class="icon">🕳️</span><span class="value" id="corruption">0%</span></div>
       </div>
+      <div class="hud-row weather-row">
+        <div class="stat weather-stat">
+          <span class="icon" id="time-icon">☀️</span>
+          <span class="value" id="time-name">День</span>
+        </div>
+        <div class="stat weather-stat">
+          <span class="icon" id="weather-icon">☀️</span>
+          <span class="value" id="weather-name">Ясно</span>
+          <span class="sub" id="weather-effect">×1.0</span>
+        </div>
+        <div class="stat status-stat" id="status-stat">
+          <span class="icon" id="status-icon">🟢</span>
+          <span class="value" id="status-name">Затишье</span>
+        </div>
+      </div>
       <div class="hud-row controls-row">
         <div class="speed-group">
           <button class="speed-btn" data-speed="1">×1</button>
@@ -103,6 +118,7 @@
       </div>
       <div class="city-panel-actions">
         <button id="city-attack-btn" class="action-btn">⚔️ Наступление</button>
+        <button id="city-hire-btn" class="action-btn hire-btn">👥 Найм</button>
         <button id="city-fortify-btn" class="action-btn fortify-btn">🛡️ Укрепиться</button>
         <button id="city-build-btn" class="action-btn build-btn">🏗️ Строить</button>
       </div>
@@ -132,6 +148,7 @@
           <button class="actions-tab" data-tab="services">🛠️ <span data-i18n="tabServices">Службы</span></button>
           <button class="actions-tab" data-tab="logistics">🚚 <span data-i18n="tabLogistics">Логистика</span></button>
           <button class="actions-tab" data-tab="production">🏭 <span data-i18n="tabProduction">Производство</span></button>
+          <button class="actions-tab" data-tab="army">⚔️ <span data-i18n="tabArmy">Армия</span></button>
         </div>
         <button id="actions-close">✕</button>
       </div>
@@ -231,7 +248,7 @@
             <button class="service-invest" id="svc-health-btn">
               <span data-i18n="invest">Вложить +8</span> · 💰 <span id="svc-health-cost">128</span>
             </button>
-            <div class="service-desc" data-i18n="svcHealthDesc">Меньше потерь от болезней и обстрелов</div>
+            <div class="service-desc" data-i18n="svcHealthDesc">Снижает смертность. Меньше потерь от обстрелов</div>
           </div>
 
           <div class="service-card">
@@ -254,7 +271,7 @@
             <div class="service-bar corruption-bar"><div class="service-bar-fill" id="svc-corruption-bar" style="width: 9%"></div></div>
             <button class="service-invest corruption-btn" id="svc-corruption-btn">
               <span data-i18n="antiCorruption">Антикоррупционная кампания</span>
-              · 💰 <span id="svc-corruption-cost">104</span> (−<span id="svc-corruption-reduce">12</span>)
+              · 💰 <span id="svc-corruption-cost">104</span>
             </button>
             <div class="service-desc" id="svc-corruption-desc"></div>
           </div>
@@ -267,7 +284,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">📊 <span data-i18n="techEconomy">Экономика</span></span>
-              <span class="logistics-level"><span id="tech-economy-level">2</span>/6 · 💰 <span id="tech-economy-cost">693</span></span>
+              <span class="logistics-level"><span id="tech-economy-level">0</span>/6 · 💰 <span id="tech-economy-cost">300</span></span>
             </div>
             <button class="logistics-invest" id="tech-economy-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techEconomyDesc">+20% дохода страны за уровень</div>
@@ -276,7 +293,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">📦 <span data-i18n="techLogistics">Логистика</span></span>
-              <span class="logistics-level"><span id="tech-logistics-level">1</span>/6 · 💰 <span id="tech-logistics-cost">308</span></span>
+              <span class="logistics-level"><span id="tech-logistics-level">0</span>/6 · 💰 <span id="tech-logistics-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-logistics-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techLogisticsDesc">−8% расход, +10% выпуск с заводов</div>
@@ -285,7 +302,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">🏭 <span data-i18n="techDroneFactory">Заводы дронов</span></span>
-              <span class="logistics-level"><span id="tech-dronefactory-level">1</span>/6 · 💰 <span id="tech-dronefactory-cost">338</span></span>
+              <span class="logistics-level"><span id="tech-dronefactory-level">0</span>/6 · 💰 <span id="tech-dronefactory-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-dronefactory-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techDroneFactoryDesc">+0.04/с сборка дронов, +2 к складу</div>
@@ -294,7 +311,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">🏠 <span data-i18n="techLife">Качество жизни</span></span>
-              <span class="logistics-level"><span id="tech-life-level">2</span>/6 · 💰 <span id="tech-life-cost">756</span></span>
+              <span class="logistics-level"><span id="tech-life-level">0</span>/6 · 💰 <span id="tech-life-cost">380</span></span>
             </div>
             <button class="logistics-invest" id="tech-life-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techLifeDesc">+0.07 к благосостоянию в секунду</div>
@@ -303,7 +320,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">👶 <span data-i18n="techBirth">Рождаемость</span></span>
-              <span class="logistics-level"><span id="tech-birth-level">1</span>/6 · 💰 <span id="tech-birth-cost">308</span></span>
+              <span class="logistics-level"><span id="tech-birth-level">0</span>/6 · 💰 <span id="tech-birth-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-birth-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techBirthDesc">+1.2‰ за уровень</div>
@@ -314,7 +331,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">🎖️ <span data-i18n="techCombat">Боевая подготовка</span></span>
-              <span class="logistics-level"><span id="tech-combat-level">2</span>/6 · 💰 <span id="tech-combat-cost">756</span></span>
+              <span class="logistics-level"><span id="tech-combat-level">0</span>/6 · 💰 <span id="tech-combat-cost">350</span></span>
             </div>
             <button class="logistics-invest" id="tech-combat-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techCombatDesc">+12% атаки войск за уровень</div>
@@ -323,7 +340,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">🛡️ <span data-i18n="techArmor">Военная техника</span></span>
-              <span class="logistics-level"><span id="tech-armor-level">1</span>/6 · 💰 <span id="tech-armor-cost">369</span></span>
+              <span class="logistics-level"><span id="tech-armor-level">0</span>/6 · 💰 <span id="tech-armor-cost">300</span></span>
             </div>
             <button class="logistics-invest" id="tech-armor-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techArmorDesc">+12% обороны за уровень</div>
@@ -332,7 +349,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">🎯 <span data-i18n="techAA">ПВО</span></span>
-              <span class="logistics-level"><span id="tech-aa-level">2</span>/6 · 💰 <span id="tech-aa-cost">819</span></span>
+              <span class="logistics-level"><span id="tech-aa-level">0</span>/6 · 💰 <span id="tech-aa-cost">400</span></span>
             </div>
             <button class="logistics-invest" id="tech-aa-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techAADesc">Шанс сбить дроны и ракеты врага</div>
@@ -341,7 +358,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">✈️ <span data-i18n="techDrones">Дроны</span></span>
-              <span class="logistics-level"><span id="tech-drones-level">1</span>/6 · 💰 <span id="tech-drones-cost">430</span></span>
+              <span class="logistics-level"><span id="tech-drones-level">0</span>/6 · 💰 <span id="tech-drones-cost">350</span></span>
             </div>
             <button class="logistics-invest" id="tech-drones-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techDronesDesc">Открывает дроны; +урон и дальность</div>
@@ -350,7 +367,7 @@
           <div class="logistics-card">
             <div class="logistics-header">
               <span class="logistics-title">📣 <span data-i18n="techMobilization">Мобилизация</span></span>
-              <span class="logistics-level"><span id="tech-mobilization-level">1</span>/6 · 💰 <span id="tech-mobilization-cost">308</span></span>
+              <span class="logistics-level"><span id="tech-mobilization-level">0</span>/6 · 💰 <span id="tech-mobilization-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-mobilization-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techMobDesc">Открывает призыв: +войска, −благосостояние</div>
@@ -390,7 +407,7 @@
               <span class="logistics-title">🛡️ <span data-i18n="resTanks">Танки</span></span>
               <span class="logistics-level" id="res-tanks-count">0/40</span>
             </div>
-            <div class="logistics-desc" id="res-tanks-prod">производство 0 · нет зданий</div>
+            <div class="logistics-desc" id="res-tanks-prod">производство 0</div>
             <button class="logistics-invest" id="buy-tanks-btn">Купить +1 · 💰 160</button>
           </div>
 
@@ -402,6 +419,14 @@
             <div class="logistics-desc" id="res-fuel-prod">производство +0.00/с</div>
             <div class="logistics-desc" id="res-fuel-drain">расход −0.40/с</div>
             <button class="logistics-invest" id="buy-fuel-btn">Купить +20 · 💰 160</button>
+          </div>
+
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">✈️ <span data-i18n="resDrones">Дроны</span></span>
+              <span class="logistics-level" id="res-drones-count">0/100</span>
+            </div>
+            <div class="logistics-desc" id="res-drones-prod">производство +0.00/с</div>
           </div>
 
           <div class="logistics-group-title" data-i18n="grpBuild">🏗️ Здания в городах</div>
@@ -457,6 +482,69 @@
             <div class="logistics-desc">+1.0 топлива/с</div>
           </div>
         </div>
+
+        <!-- ===== АРМИЯ ===== -->
+        <div class="actions-panel hidden" id="panel-army">
+          <div class="action-block">
+            <div class="action-row">
+              <span data-i18n="armyTotal">Всего войск:</span>
+              <span class="action-value" id="army-total">0</span>
+            </div>
+            <div class="action-row">
+              <span data-i18n="armyGarrisons">В гарнизонах:</span>
+              <span class="action-value" id="army-garrisons">0</span>
+            </div>
+            <div class="action-row">
+              <span data-i18n="armyInField">В поле:</span>
+              <span class="action-value" id="army-in-field">0</span>
+            </div>
+          </div>
+
+          <div class="logistics-group-title">🪖 <span data-i18n="unitInfantry">Пехота</span></div>
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">🪖 <span data-i18n="unitInfantry">Пехота</span></span>
+              <span class="logistics-level" id="army-infantry-count">0</span>
+            </div>
+            <div class="logistics-desc" data-i18n="unitInfantryDesc">Базовая боевая единица. Дешёвая, универсальная.</div>
+          </div>
+
+          <div class="logistics-group-title">🛡️ <span data-i18n="unitTanks">Танки</span></div>
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">🛡️ <span data-i18n="unitTanks">Танки</span></span>
+              <span class="logistics-level" id="army-tanks-count">0</span>
+            </div>
+            <div class="logistics-desc" data-i18n="unitTanksDesc">Тяжёлые войска. Сильны в атаке, дорогие.</div>
+          </div>
+
+          <div class="logistics-group-title">🎯 <span data-i18n="unitAA">ПВО</span></div>
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">🎯 <span data-i18n="unitAA">ПВО</span></span>
+              <span class="logistics-level" id="army-aa-count">0</span>
+            </div>
+            <div class="logistics-desc" data-i18n="unitAADesc">Сбивает дроны и ракеты. Уязвимо для танков.</div>
+          </div>
+
+          <div class="logistics-group-title">🚀 <span data-i18n="unitMissiles">Ракетные комплексы</span></div>
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">🚀 <span data-i18n="unitMissiles">Ракетные комплексы</span></span>
+              <span class="logistics-level" id="army-missiles-count">0</span>
+            </div>
+            <div class="logistics-desc" data-i18n="unitMissilesDesc">Дальний удар. Дорого, медленно, но мощно.</div>
+          </div>
+
+          <div class="logistics-group-title">✈️ <span data-i18n="unitDrones">Дроны</span></div>
+          <div class="logistics-card">
+            <div class="logistics-header">
+              <span class="logistics-title">✈️ <span data-i18n="unitDrones">Дроны</span></span>
+              <span class="logistics-level" id="army-drones-count">0</span>
+            </div>
+            <div class="logistics-desc" data-i18n="unitDronesDesc">Требует прокачки в «Логистике». Разведка и атака.</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -468,6 +556,42 @@
           <button id="build-modal-close">✕</button>
         </div>
         <div id="build-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Модалка найма -->
+    <div id="hire-modal" class="build-modal hidden">
+      <div class="build-modal-content">
+        <div class="build-modal-header">
+          <span class="build-modal-title" id="hire-modal-title">Найм</span>
+          <button id="hire-modal-close">✕</button>
+        </div>
+        <div id="hire-modal-resources" class="hire-resources"></div>
+        <div id="hire-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Модалка отправки отряда -->
+    <div id="send-modal" class="build-modal hidden">
+      <div class="build-modal-content">
+        <div class="build-modal-header">
+          <span class="build-modal-title" id="send-modal-title">Наступление</span>
+          <button id="send-modal-close">✕</button>
+        </div>
+        <div id="send-modal-body"></div>
+        <button id="send-confirm-btn" class="action-btn" style="margin-top:12px;">ОТПРАВИТЬ</button>
+      </div>
+    </div>
+
+    <!-- Модалка результата боя -->
+    <div id="battle-modal" class="build-modal hidden">
+      <div class="build-modal-content">
+        <div class="build-modal-header">
+          <span class="build-modal-title" id="battle-modal-title">Бой</span>
+          <button id="battle-modal-close">✕</button>
+        </div>
+        <div id="battle-modal-body"></div>
+        <button id="battle-ok-btn" class="action-btn" style="margin-top:12px;">OK</button>
       </div>
     </div>
 

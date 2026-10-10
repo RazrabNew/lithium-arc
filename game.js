@@ -37,7 +37,8 @@ const LANG = {
     cityOwner: 'Владелец:', cityType: 'Тип:', cityGarrison: 'Гарнизон:',
     cityInfra: 'Инфраструктура:', cityIncome: 'Доход:', cityDefense: 'Оборона:',
     cityBuildings: 'Здания:', cityStrategic: 'Стратег. объект:',
-    tabCountry: 'Страна', tabServices: 'Службы', tabLogistics: 'Логистика', tabProduction: 'Производство',
+    tabCountry: 'Страна', tabServices: 'Службы', tabLogistics: 'Логистика',
+    tabProduction: 'Производство', tabArmy: 'Армия',
     populationLabel: 'Население', birthRate: 'Рождаемость', deathRate: 'Смертность',
     workersLabel: 'Работают', armyLabel: 'В армии', welfareLabel: 'Благосостояние',
     taxLabel: 'Налоги', paymentsLabel: 'Выплаты населению',
@@ -45,7 +46,7 @@ const LANG = {
     svcHealth: 'Здравоохранение', svcEmergency: 'МЧС', svcCorruption: 'Коррупция',
     invest: 'Вложить +8', antiCorruption: 'Антикоррупционная кампания',
     svcScienceDesc: 'До +25% дохода', svcOrderDesc: 'Меньше беспорядков',
-    svcHealthDesc: 'Меньше потерь', svcEmergencyDesc: 'Меньше ущерба',
+    svcHealthDesc: 'Снижает смертность', svcEmergencyDesc: 'Меньше ущерба',
     grpEconomy: '🏭 Экономика и производство', grpMilitary: '⚔️ Военная мощь',
     grpResources: '📦 Ресурсы', grpBuild: '🏗️ Здания в городах',
     techEconomy: 'Экономика', techCombat: 'Боевая подготовка', techArmor: 'Военная техника',
@@ -58,10 +59,20 @@ const LANG = {
     techDroneFactoryDesc: '+0.04/с сборка дронов', techMobDesc: 'Открывает призыв',
     techLifeDesc: '+0.07 к благу/с', techBirthDesc: '+1.2‰ за уровень',
     mobilize: 'Мобилизация · призыв',
-    resAmmo: 'Боеприпасы', resWeapons: 'Оружие', resTanks: 'Танки', resFuel: 'Топливо',
+    resAmmo: 'Боеприпасы', resWeapons: 'Оружие', resTanks: 'Танки',
+    resFuel: 'Топливо', resDrones: 'Дроны',
     buy: 'Купить', bldMine: 'Шахта', bldFactory: 'Завод', bldAmmo: 'Завод боеприпасов',
     bldWeapon: 'Оружейный завод', bldTank: 'Танковый завод', bldOil: 'Нефтяная скважина',
     buildHint: 'Тапните город → кнопка «Строить».',
+    armyTotal: 'Всего войск:', armyGarrisons: 'В гарнизонах:', armyInField: 'В поле:',
+    unitInfantry: 'Пехота', unitTanks: 'Танки', unitAA: 'ПВО',
+    unitMissiles: 'Ракетные комплексы', unitDrones: 'Дроны',
+    unitInfantryDesc: 'Базовая боевая единица.',
+    unitTanksDesc: 'Тяжёлые войска.',
+    unitAADesc: 'Сбивает дроны и ракеты.',
+    unitMissilesDesc: 'Дальний удар.',
+    unitDronesDesc: 'Разведка и атака.',
+    hireBtn: 'Найм',
   },
   en: {
     gameTitle: 'LITHIUM ARC', gameSubtitle: 'Real-time strategy',
@@ -69,7 +80,8 @@ const LANG = {
     startGame: 'START GAME',
     auroraName: 'Aurora Republic', vesperName: 'Vesper Dominion',
     easy: 'Easy', normal: 'Normal', hard: 'Hard', insane: 'Insane',
-    diffEasy: 'Calm intro.', diffNormal: 'Balanced.', diffHard: 'AI aggressive.', diffInsane: 'Maximum pressure.',
+    diffEasy: 'Calm intro.', diffNormal: 'Balanced.',
+    diffHard: 'AI aggressive.', diffInsane: 'Maximum pressure.',
     aiIncome: 'Income', playerMoney: 'Your money', playerSat: 'Start welfare',
     chooseTarget: 'Choose target', chooseSource: 'Attack from?', backToMenu: 'Back',
     ownerAurora: 'Aurora', ownerVesper: 'Vesper', ownerNeutral: 'Neutral',
@@ -77,16 +89,17 @@ const LANG = {
     cityOwner: 'Owner:', cityType: 'Type:', cityGarrison: 'Garrison:',
     cityInfra: 'Infrastructure:', cityIncome: 'Income:', cityDefense: 'Defense:',
     cityBuildings: 'Buildings:', cityStrategic: 'Strategic:',
-    tabCountry: 'Country', tabServices: 'Services', tabLogistics: 'Logistics', tabProduction: 'Production',
+    tabCountry: 'Country', tabServices: 'Services', tabLogistics: 'Logistics',
+    tabProduction: 'Production', tabArmy: 'Army',
     populationLabel: 'Population', birthRate: 'Birth rate', deathRate: 'Death rate',
     workersLabel: 'Workers', armyLabel: 'In army', welfareLabel: 'Welfare',
-    taxLabel: 'Taxes', paymentsLabel: 'Payments to people',
-    svcScience: 'Science & Education', svcOrder: 'Law & Order',
-    svcHealth: 'Healthcare', svcEmergency: 'Emergency', svcCorruption: 'Corruption',
+    taxLabel: 'Taxes', paymentsLabel: 'Payments',
+    svcScience: 'Science', svcOrder: 'Law & Order', svcHealth: 'Healthcare',
+    svcEmergency: 'Emergency', svcCorruption: 'Corruption',
     invest: 'Invest +8', antiCorruption: 'Anti-corruption',
     svcScienceDesc: 'Up to +25% income', svcOrderDesc: 'Fewer riots',
-    svcHealthDesc: 'Fewer losses', svcEmergencyDesc: 'Less damage',
-    grpEconomy: '🏭 Economy & Production', grpMilitary: '⚔️ Military',
+    svcHealthDesc: 'Reduces death rate', svcEmergencyDesc: 'Less damage',
+    grpEconomy: '🏭 Economy', grpMilitary: '⚔️ Military',
     grpResources: '📦 Resources', grpBuild: '🏗️ Buildings',
     techEconomy: 'Economy', techCombat: 'Combat', techArmor: 'Armor',
     techLogistics: 'Logistics', techAA: 'Air defense', techDrones: 'Drones',
@@ -98,11 +111,96 @@ const LANG = {
     techDroneFactoryDesc: '+0.04/s drone build', techMobDesc: 'Unlock conscription',
     techLifeDesc: '+0.07 welfare/s', techBirthDesc: '+1.2‰/level',
     mobilize: 'Mobilization',
-    resAmmo: 'Ammo', resWeapons: 'Weapons', resTanks: 'Tanks', resFuel: 'Fuel',
+    resAmmo: 'Ammo', resWeapons: 'Weapons', resTanks: 'Tanks',
+    resFuel: 'Fuel', resDrones: 'Drones',
     buy: 'Buy', bldMine: 'Mine', bldFactory: 'Factory', bldAmmo: 'Ammo factory',
     bldWeapon: 'Weapon factory', bldTank: 'Tank factory', bldOil: 'Oil well',
-    buildHint: 'Tap a city → «Build» button.',
+    buildHint: 'Tap city → «Build».',
+    armyTotal: 'Total troops:', armyGarrisons: 'In garrisons:', armyInField: 'In field:',
+    unitInfantry: 'Infantry', unitTanks: 'Tanks', unitAA: 'Air defense',
+    unitMissiles: 'Missile systems', unitDrones: 'Drones',
+    unitInfantryDesc: 'Basic combat unit.',
+    unitTanksDesc: 'Heavy troops.',
+    unitAADesc: 'Shoots down drones.',
+    unitMissilesDesc: 'Long-range strike.',
+    unitDronesDesc: 'Recon and attack.',
+    hireBtn: 'Hire',
   },
+};
+
+// ============ UNIT TYPES ============
+const UNIT_TYPES = {
+  infantry: { icon: '🪖', ru: 'Пехота', en: 'Infantry',
+    cost: { weapons: 5, fuel: 0.5, money: 30 }, power: 1.0 },
+  tanks:    { icon: '🛡️', ru: 'Танки', en: 'Tanks',
+    cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
+  aa:       { icon: '🎯', ru: 'ПВО', en: 'Air defense',
+    cost: { weapons: 8, fuel: 3, money: 120 }, power: 1.5 },
+  missiles: { icon: '🚀', ru: 'Ракеты', en: 'Missiles',
+    cost: { weapons: 15, fuel: 5, money: 250 }, power: 5.0 },
+  drones:   { icon: '✈️', ru: 'Дроны', en: 'Drones',
+    cost: { drones: 1, money: 60 }, power: 0.8 },
+};
+
+const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
+
+function makeStartingGarrison() { return { infantry: 5, tanks: 2, aa: 0, missiles: 0, drones: 0 }; }
+function makeEmptyGarrison() { return { infantry: 0, tanks: 0, aa: 0, missiles: 0, drones: 0 }; }
+
+function getGarrisonTotal(g) {
+  return UNIT_ORDER.reduce((s, k) => s + (g[k] || 0), 0);
+}
+
+function getCityPower(city) {
+  const g = city.garrison || {};
+  let power = 0;
+  UNIT_ORDER.forEach(k => { power += (g[k] || 0) * (UNIT_TYPES[k]?.power || 0); });
+  return power;
+}
+
+function canAttack(city) {
+  if (city.owner !== state.faction) return false;
+  return getGarrisonTotal(city.garrison) > 0;
+}
+
+function canHire(city, unitType, count = 1) {
+  if (city.owner !== state.faction) return false;
+  const cost = UNIT_TYPES[unitType].cost;
+  if (state.money < (cost.money || 0) * count) return false;
+  if (state.resources.weapons < (cost.weapons || 0) * count) return false;
+  if (state.resources.tanks < (cost.tanks || 0) * count) return false;
+  if (state.resources.fuel < (cost.fuel || 0) * count) return false;
+  if (state.resources.drones < (cost.drones || 0) * count) return false;
+  return true;
+}
+
+// ============ WEATHER ============
+const WEATHER = {
+  clear:    { icon: '☀️', ru: 'Ясно',   en: 'Clear',    speedMult: 1.0, incomeMult: 1.00, welfareDelta: 0,     aaMult: 1.0 },
+  rain:     { icon: '🌧️', ru: 'Дождь',  en: 'Rain',     speedMult: 0.8, incomeMult: 0.95, welfareDelta: 0,     aaMult: 1.0 },
+  snow:     { icon: '❄️', ru: 'Снег',   en: 'Snow',     speedMult: 0.6, incomeMult: 0.90, welfareDelta: -0.05, aaMult: 1.0 },
+  fog:      { icon: '🌫️', ru: 'Туман',  en: 'Fog',      speedMult: 0.7, incomeMult: 1.00, welfareDelta: 0,     aaMult: 0.8 },
+  storm:    { icon: '⛈️', ru: 'Гроза',  en: 'Storm',    speedMult: 0.5, incomeMult: 0.85, welfareDelta: -0.10, aaMult: 0.8 },
+  blizzard: { icon: '🌪️', ru: 'Буря',   en: 'Blizzard', speedMult: 0.4, incomeMult: 0.75, welfareDelta: -0.15, aaMult: 0.7 },
+};
+
+const WEATHER_KEYS = ['clear', 'clear', 'clear', 'rain', 'rain', 'snow', 'fog', 'storm', 'blizzard'];
+
+// ============ DAY/NIGHT ============
+const DAY_CYCLE_DURATION = 240;
+
+const DAY_PHASES = [
+  { key: 'dawn',  icon: '🌅', ru: 'Рассвет', en: 'Dawn',  start: 0.000, end: 0.125 },
+  { key: 'day',   icon: '☀️', ru: 'День',    en: 'Day',   start: 0.125, end: 0.500 },
+  { key: 'dusk',  icon: '🌇', ru: 'Закат',   en: 'Dusk',  start: 0.500, end: 0.625 },
+  { key: 'night', icon: '🌙', ru: 'Ночь',    en: 'Night', start: 0.625, end: 1.000 },
+];
+
+const DAY_EFFECTS = {
+  dawn:  { incomeMult: 1.00, speedMult: 1.00, welfareDelta: 0,     darkness: 0.15 },
+  day:   { incomeMult: 1.10, speedMult: 1.00, welfareDelta: 0,     darkness: 0.00 },
+  dusk:  { incomeMult: 1.00, speedMult: 1.00, welfareDelta: 0,     darkness: 0.20 },
+  night: { incomeMult: 0.90, speedMult: 0.80, welfareDelta: -0.02, darkness: 0.55 },
 };
 
 // ============ STATE ============
@@ -116,14 +214,17 @@ const state = {
   paymentsCost: 70,
   services: { science: 31, order: 23, health: 23, emergency: 23, corruption: 9 },
   tech: {
-    economy: 2, combat: 2, armor: 1, logistics: 1, aa: 2,
-    drones: 1, dronefactory: 1, mobilization: 1, life: 2, birth: 1,
+    economy: 0, combat: 0, armor: 0, logistics: 0, aa: 0,
+    drones: 0, dronefactory: 0, mobilization: 0, life: 0, birth: 0,
   },
-  resources: { ammo: 139, weapons: 71, tanks: 3, fuel: 162 },
+  resources: { ammo: 139, weapons: 71, tanks: 3, fuel: 162, drones: 0 },
   mobilizeCooldown: 0,
+  weather: 'clear', weatherTimer: 90, weatherDuration: 90,
+  globalTime: 0, lastAttackTime: -999,
+  dayTime: 0.2,
 };
 
-const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300 };
+const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
 
 // ============ КАРТА ============
 const MAP = { W: 40, H: 30, TILE: 40 };
@@ -149,10 +250,10 @@ const camera = {
 
 // ============ КОНФИГУРАЦИИ ============
 const SERVICES_CFG = {
-  science:     { baseCost: 130, increment: 8 },
-  order:       { baseCost: 95,  increment: 8 },
-  health:      { baseCost: 95,  increment: 8 },
-  emergency:   { baseCost: 95,  increment: 8 },
+  science:   { baseCost: 130, increment: 8 },
+  order:     { baseCost: 95,  increment: 8 },
+  health:    { baseCost: 95,  increment: 8 },
+  emergency: { baseCost: 95,  increment: 8 },
 };
 
 const TECH_CFG = {
@@ -195,16 +296,14 @@ function applyLanguage(lang) {
 function selectFaction(faction) {
   state.settings.faction = faction;
   document.querySelectorAll('.faction-card').forEach(c =>
-    c.classList.toggle('selected', c.dataset.faction === faction)
-  );
+    c.classList.toggle('selected', c.dataset.faction === faction));
   checkReady();
 }
 
 function selectDifficulty(diff) {
   state.settings.difficulty = diff;
   document.querySelectorAll('.diff-btn').forEach(b =>
-    b.classList.toggle('selected', b.dataset.diff === diff)
-  );
+    b.classList.toggle('selected', b.dataset.diff === diff));
   updateDifficultyDesc(diff);
   checkReady();
 }
@@ -214,14 +313,8 @@ function updateDifficultyDesc(diff) {
   const d = DIFFICULTY[diff];
   const el = document.getElementById('difficulty-desc');
   el.dataset.diff = diff;
-
-  const pct = (mult) => {
-    const v = Math.round((mult - 1) * 100);
-    return (v > 0 ? '+' : '') + v + '%';
-  };
-
+  const pct = m => { const v = Math.round((m - 1) * 100); return (v > 0 ? '+' : '') + v + '%'; };
   const cap = diff.charAt(0).toUpperCase() + diff.slice(1);
-
   el.innerHTML = `
     <div class="desc-title">${dict['diff' + cap]}</div>
     <div class="row-desc"><span>${dict.playerMoney}</span><span>${pct(d.playerMoneyMult)}</span></div>
@@ -267,14 +360,14 @@ function generateCities() {
 
   CITIES.push({
     x: 3, y: 3, type: 'capital', owner: 'aurora',
-    name: 'Аврора', baseIncome: 1.5, basePop: 5, infrastructure: 100, garrison: 5,
-    fortification: 2,
+    name: 'Аврора', baseIncome: 1.5, basePop: 5, infrastructure: 100,
+    garrison: makeStartingGarrison(), fortification: 2,
     buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
   });
   CITIES.push({
     x: MAP.W - 4, y: MAP.H - 4, type: 'capital', owner: 'vesper',
-    name: 'Веспер', baseIncome: 1.5, basePop: 5, infrastructure: 100, garrison: 5,
-    fortification: 2,
+    name: 'Веспер', baseIncome: 1.5, basePop: 5, infrastructure: 100,
+    garrison: makeStartingGarrison(), fortification: 2,
     buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
   });
 
@@ -292,10 +385,9 @@ function generateCities() {
   const suffix = ['град', 'поль', 'бург', 'ов', 'ин', 'ск', 'ец', 'овка', 'ино', 'ово'];
 
   const usedNames = new Set();
-  const genName = (prefixes) => {
+  const genName = prefixes => {
     for (let i = 0; i < 100; i++) {
-      const name = prefixes[Math.floor(rand() * prefixes.length)]
-                 + suffix[Math.floor(rand() * suffix.length)];
+      const name = prefixes[Math.floor(rand() * prefixes.length)] + suffix[Math.floor(rand() * suffix.length)];
       if (!usedNames.has(name)) { usedNames.add(name); return name; }
     }
     return 'Город-' + Math.floor(rand() * 10000);
@@ -310,9 +402,12 @@ function generateCities() {
         const y = zone.yMin + Math.floor(rand() * (zone.yMax - zone.yMin));
         if (CITIES.some(c => Math.abs(c.x - x) < 3 && Math.abs(c.y - y) < 3)) continue;
 
+        const g = makeEmptyGarrison();
+        g.infantry = garrison;
+
         CITIES.push({
           x, y, type, owner, name: genName(prefixes),
-          baseIncome, basePop: 1, garrison,
+          baseIncome, basePop: 1, garrison: g,
           infrastructure: 60 + Math.floor(rand() * 30),
           fortification: 0,
           buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
@@ -398,7 +493,6 @@ function drawRegionsVoronoi() {
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
-
     const cx = city.x * MAP.TILE + MAP.TILE / 2;
     const cy = city.y * MAP.TILE + MAP.TILE / 2;
 
@@ -615,13 +709,8 @@ function handleCanvasClick(clientX, clientY) {
 // ============ ПАНЕЛЬ ГОРОДА ============
 let selectedCity = null;
 
-function getFortification(city) {
-  return FORTIFICATIONS[city.fortification || 0];
-}
-
-function getDefenseMultiplier(city) {
-  return 1 + (city.fortification || 0) * 0.15;
-}
+function getFortification(city) { return FORTIFICATIONS[city.fortification || 0]; }
+function getDefenseMultiplier(city) { return 1 + (city.fortification || 0) * 0.15; }
 
 function openCityPanel(city) {
   selectedCity = city;
@@ -638,7 +727,12 @@ function openCityPanel(city) {
     city.type === 'capital' ? dict.typeCapital :
     city.type === 'large' ? dict.typeLarge :
     city.type === 'medium' ? dict.typeMedium : dict.typeSmall;
-  document.getElementById('city-garrison').textContent = city.garrison;
+
+  const g = city.garrison || makeEmptyGarrison();
+  const gTotal = getGarrisonTotal(g);
+  const gStr = UNIT_ORDER.filter(k => g[k] > 0).map(k => `${UNIT_TYPES[k].icon}${g[k]}`).join(' ') || '—';
+  document.getElementById('city-garrison').textContent = `${gTotal} (${gStr})`;
+
   document.getElementById('city-infra').textContent = city.infrastructure + '%';
 
   const fort = getFortification(city);
@@ -657,13 +751,18 @@ function openCityPanel(city) {
   document.getElementById('city-strategic').style.color = isStrategic ? '#ff3b5c' : '';
 
   const attackBtn = document.getElementById('city-attack-btn');
+  const hireBtn = document.getElementById('city-hire-btn');
   const fortifyBtn = document.getElementById('city-fortify-btn');
   const buildBtn = document.getElementById('city-build-btn');
 
   if (isOwn) {
     attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
-    attackBtn.disabled = city.garrison < 1;
-    attackBtn.onclick = () => openAttackTargetPanel();
+    attackBtn.disabled = !canAttack(city);
+    attackBtn.onclick = () => openSendModal(city);
+
+    hireBtn.style.display = 'block';
+    hireBtn.disabled = false;
+    hireBtn.onclick = () => openHireModal(city);
 
     const nextFort = FORTIFICATIONS[(city.fortification || 0) + 1];
     if (nextFort) {
@@ -681,7 +780,7 @@ function openCityPanel(city) {
     buildBtn.disabled = false;
     buildBtn.onclick = () => openBuildModal(city);
   } else {
-    const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && c.garrison > 0);
+    const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && canAttack(c));
     if (sources.length > 0) {
       attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
       attackBtn.disabled = false;
@@ -691,6 +790,7 @@ function openCityPanel(city) {
       attackBtn.disabled = true;
       attackBtn.onclick = null;
     }
+    hireBtn.style.display = 'none';
     fortifyBtn.style.display = 'none';
     buildBtn.style.display = 'none';
   }
@@ -714,6 +814,7 @@ function fortifyCity(city) {
 
 // ============ ПАНЕЛИ АТАК ============
 function openAttackTargetPanel() {
+  // используется только для вражеских городов (выбор источника)
   if (!selectedCity) return;
   const dict = LANG[state.settings.language];
   const panel = document.getElementById('attack-target-panel');
@@ -722,24 +823,17 @@ function openAttackTargetPanel() {
   list.innerHTML = '';
 
   const targets = getRoadsFrom(selectedCity).filter(c => c.owner !== state.faction);
-
-  if (targets.length === 0) {
-    list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:10px">Нет доступных целей</div>';
-    return;
-  }
-
   targets.forEach(target => {
     const row = document.createElement('div');
     row.className = 'target-row';
     row.innerHTML = `
       <div>
         <div class="target-name">${target.name}</div>
-        <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper}</div>
+        <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper} · Сила: ${getCityPower(target).toFixed(1)}</div>
       </div>
-      <div class="target-info">🛡️ ${target.garrison}</div>
     `;
     row.addEventListener('click', () => {
-      launchAttack(selectedCity, target);
+      launchAttackFromTo(selectedCity, target);
       closeAttackTargetPanel();
       closeCityPanel();
     });
@@ -764,14 +858,14 @@ function openAttackSourcesPanel(targetCity, sources) {
     row.innerHTML = `
       <div>
         <div class="target-name">${source.name}</div>
-        <div class="target-info">🛡️ ${source.garrison}</div>
+        <div class="target-info">Сила: ${getCityPower(source).toFixed(1)}</div>
       </div>
       <div class="target-info">→ ${targetCity.name}</div>
     `;
     row.addEventListener('click', () => {
-      launchAttack(source, targetCity);
       closeAttackSourcesPanel();
       closeCityPanel();
+      openSendCompositionModal(source, targetCity);
     });
     list.appendChild(row);
   });
@@ -782,48 +876,218 @@ function closeAttackSourcesPanel() {
 }
 document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
-// ============ АТАКА ============
-function launchAttack(fromCity, toCity) {
-  if (fromCity.garrison < 1) return;
-  const units = fromCity.garrison;
-  fromCity.garrison = 0;
-  ACTIVE_ATTACKS.push({ from: fromCity, to: toCity, units, progress: 0, speed: 0.3 });
-}
+// ============ ОТПРАВКА ОТРЯДА ============
+let sendFromCity = null;
+let sendToCity = null;
+let sendComposition = null;
 
-function updateAttacks(dt) {
-  for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
-    const atk = ACTIVE_ATTACKS[i];
-    atk.progress += atk.speed * dt;
-    if (atk.progress >= 1) {
-      resolveAttack(atk.from, atk.to, atk.units);
-      ACTIVE_ATTACKS.splice(i, 1);
-    }
-  }
-}
+function openSendModal(fromCity) {
+  const targets = getRoadsFrom(fromCity).filter(c => c.owner !== state.faction);
+  if (targets.length === 0) return;
 
-function resolveAttack(fromCity, toCity, units) {
-  const combatBonus = 1 + state.tech.combat * 0.12;
-  const armorBonus = 1 + state.tech.armor * 0.12;
-  const defenseMult = getDefenseMultiplier(toCity);
-
-  const attackPower = units * combatBonus;
-  const defensePower = toCity.garrison * defenseMult * armorBonus;
-
-  if (attackPower > defensePower) {
-    const losses = Math.ceil(defensePower * 0.7);
-    toCity.owner = state.faction;
-    toCity.garrison = Math.max(0, units - losses);
-    toCity.fortification = Math.max(0, toCity.fortification - 1);
-    state.welfare -= 5;
+  if (targets.length === 1) {
+    openSendCompositionModal(fromCity, targets[0]);
   } else {
-    toCity.garrison = Math.max(0, toCity.garrison - Math.ceil(attackPower * 0.5));
-    state.welfare -= 8;
+    // Показываем выбор цели
+    const dict = LANG[state.settings.language];
+    const list = document.getElementById('attack-targets');
+    const panel = document.getElementById('attack-target-panel');
+    panel.classList.remove('hidden');
+    list.innerHTML = '';
+
+    targets.forEach(target => {
+      const row = document.createElement('div');
+      row.className = 'target-row';
+      row.innerHTML = `
+        <div>
+          <div class="target-name">${target.name}</div>
+          <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper} · Сила: ${getCityPower(target).toFixed(1)}</div>
+        </div>
+      `;
+      row.addEventListener('click', () => {
+        closeAttackTargetPanel();
+        openSendCompositionModal(fromCity, target);
+      });
+      list.appendChild(row);
+    });
   }
-  state.welfare = Math.max(0, Math.min(100, state.welfare));
-  checkVictory();
 }
 
-// ============ АТАКИ/ПАНЕЛИ ДЕЙСТВИЙ ============
+function launchAttackFromTo(from, to) {
+  openSendCompositionModal(from, to);
+}
+
+function openSendCompositionModal(fromCity, toCity) {
+  sendFromCity = fromCity;
+  sendToCity = toCity;
+  sendComposition = { ...fromCity.garrison };
+
+  const modal = document.getElementById('send-modal');
+  const title = document.getElementById('send-modal-title');
+  const body = document.getElementById('send-modal-body');
+  const lang = state.settings.language;
+
+  title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}`;
+  body.innerHTML = '';
+
+  const update = () => {
+    body.innerHTML = '';
+
+    UNIT_ORDER.forEach(key => {
+      const available = fromCity.garrison[key] || 0;
+      if (available === 0) return;
+      const current = sendComposition[key] || 0;
+      const ut = UNIT_TYPES[key];
+
+      const row = document.createElement('div');
+      row.className = 'send-row';
+      row.innerHTML = `
+        <div class="send-row-name">${ut.icon} ${lang === 'ru' ? ut.ru : ut.en} (${available})</div>
+        <div class="send-row-controls">
+          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${current <= 0 ? 'disabled' : ''}>−</button>
+          <div class="send-row-value">${current}</div>
+          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${current >= available ? 'disabled' : ''}>+</button>
+        </div>
+      `;
+      body.appendChild(row);
+    });
+
+    const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
+    const totalPower = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
+
+    const summary = document.createElement('div');
+    summary.className = 'send-summary';
+    summary.innerHTML = `Итого: <b>${totalUnits}</b> юнитов · Сила: <b>${totalPower.toFixed(1)}</b>`;
+    body.appendChild(summary);
+
+    body.querySelectorAll('.send-row-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const unit = btn.dataset.unit;
+        const delta = parseInt(btn.dataset.delta);
+        sendComposition[unit] = Math.max(0, Math.min(fromCity.garrison[unit] || 0, (sendComposition[unit] || 0) + delta));
+        update();
+      });
+    });
+
+    document.getElementById('send-confirm-btn').disabled = totalUnits === 0;
+  };
+
+  update();
+  modal.classList.remove('hidden');
+}
+
+document.getElementById('send-modal-close').addEventListener('click', () => {
+  document.getElementById('send-modal').classList.add('hidden');
+  sendFromCity = null; sendToCity = null; sendComposition = null;
+});
+
+document.getElementById('send-confirm-btn').addEventListener('click', () => {
+  if (!sendFromCity || !sendToCity || !sendComposition) return;
+  const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
+  if (totalUnits === 0) return;
+
+  UNIT_ORDER.forEach(k => {
+    sendFromCity.garrison[k] = Math.max(0, (sendFromCity.garrison[k] || 0) - (sendComposition[k] || 0));
+  });
+
+  const weather = WEATHER[state.weather];
+  const dayEff = getDayEffects();
+
+  ACTIVE_ATTACKS.push({
+    from: sendFromCity,
+    to: sendToCity,
+    composition: { ...sendComposition },
+    progress: 0,
+    speed: 0.3 * weather.speedMult * dayEff.speedMult,
+  });
+
+  state.lastAttackTime = state.globalTime;
+
+  document.getElementById('send-modal').classList.add('hidden');
+  closeCityPanel();
+  sendFromCity = null; sendToCity = null; sendComposition = null;
+});
+
+// ============ НАЙМ ============
+let hireCity = null;
+
+function openHireModal(city) {
+  hireCity = city;
+  const modal = document.getElementById('hire-modal');
+  const title = document.getElementById('hire-modal-title');
+  const body = document.getElementById('hire-modal-body');
+  const res = document.getElementById('hire-modal-resources');
+  const lang = state.settings.language;
+
+  title.textContent = `${lang === 'ru' ? 'Найм' : 'Hire'} · ${city.name}`;
+  body.innerHTML = '';
+
+  res.innerHTML = `
+    <span>💰 <b>${Math.floor(state.money)}</b></span>
+    <span>🔫 <b>${Math.floor(state.resources.weapons)}</b></span>
+    <span>🛡️ <b>${Math.floor(state.resources.tanks)}</b></span>
+    <span>⛽ <b>${Math.floor(state.resources.fuel)}</b></span>
+    <span>✈️ <b>${Math.floor(state.resources.drones)}</b></span>
+  `;
+
+  UNIT_ORDER.forEach(key => {
+    const ut = UNIT_TYPES[key];
+    const count = city.garrison[key] || 0;
+    const cost = ut.cost;
+    const costStr = [
+      cost.weapons ? `${cost.weapons}🔫` : '',
+      cost.tanks ? `${cost.tanks}🛡️` : '',
+      cost.fuel ? `${cost.fuel}⛽` : '',
+      cost.drones ? `${cost.drones}✈️` : '',
+      cost.money ? `${cost.money}💰` : '',
+    ].filter(Boolean).join(' + ');
+
+    const row = document.createElement('div');
+    row.className = 'hire-row';
+    row.innerHTML = `
+      <div class="hire-row-info">
+        <div class="hire-row-name">${ut.icon} ${lang === 'ru' ? ut.ru : ut.en}</div>
+        <div class="hire-row-count">В гарнизоне: ${count}</div>
+        <div class="hire-row-cost">${costStr}</div>
+      </div>
+      <div class="hire-row-buttons">
+        <button class="hire-btn-small" data-unit="${key}" data-count="1" ${canHire(city, key, 1) ? '' : 'disabled'}>+1</button>
+        <button class="hire-btn-small" data-unit="${key}" data-count="5" ${canHire(city, key, 5) ? '' : 'disabled'}>+5</button>
+      </div>
+    `;
+    body.appendChild(row);
+  });
+
+  body.querySelectorAll('.hire-btn-small').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const unitType = btn.dataset.unit;
+      const count = parseInt(btn.dataset.count);
+      hireUnits(hireCity, unitType, count);
+      openHireModal(hireCity);
+    });
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function hireUnits(city, unitType, count) {
+  if (!canHire(city, unitType, count)) return;
+  const cost = UNIT_TYPES[unitType].cost;
+  state.money -= (cost.money || 0) * count;
+  state.resources.weapons -= (cost.weapons || 0) * count;
+  state.resources.tanks -= (cost.tanks || 0) * count;
+  state.resources.fuel -= (cost.fuel || 0) * count;
+  state.resources.drones -= (cost.drones || 0) * count;
+  city.garrison[unitType] = (city.garrison[unitType] || 0) + count;
+}
+
+function closeHireModal() {
+  document.getElementById('hire-modal').classList.add('hidden');
+  hireCity = null;
+}
+document.getElementById('hire-modal-close').addEventListener('click', closeHireModal);
+
+// ============ ДЕЙСТВИЯ ============
 function openActionsPanel() {
   document.getElementById('actions-modal').classList.remove('hidden');
   updateCurrentTab();
@@ -854,6 +1118,7 @@ function updateCurrentTab() {
   if (active.dataset.tab === 'services') updateServicesPanel();
   if (active.dataset.tab === 'logistics') updateLogisticsPanel();
   if (active.dataset.tab === 'production') updateProductionPanel();
+  if (active.dataset.tab === 'army') updateArmyPanel();
 }
 
 // ============ СТРАНА ============
@@ -875,7 +1140,8 @@ function updateActionsPanel() {
   document.getElementById('ac-population').textContent = fmtMln(state.population);
 
   const birthRate = 8.0 + state.tech.birth * 1.2;
-  const deathRate = 13.0;
+  const health = state.services.health;
+  const deathRate = 13.0 * (1 - health / 100 * 0.45);
   document.getElementById('ac-birth').textContent = birthRate.toFixed(1) + '‰';
   document.getElementById('ac-death').textContent = deathRate.toFixed(1) + '‰';
 
@@ -910,10 +1176,8 @@ function updateActionsPanel() {
 // ============ СЛУЖБЫ ============
 function getServiceCost(key) {
   const cfg = SERVICES_CFG[key];
-  const lvl = state.services[key];
-  return Math.round(cfg.baseCost * Math.pow(1.06, lvl));
+  return Math.round(cfg.baseCost * Math.pow(1.06, state.services[key]));
 }
-
 function getCorruptionCost() {
   return Math.round(80 * Math.pow(1.08, 100 - state.services.corruption));
 }
@@ -944,12 +1208,10 @@ function updateServicesPanel() {
     document.getElementById(`svc-${key}-cost`).textContent = getServiceCost(key);
     document.getElementById(`svc-${key}-btn`).disabled = state.money < getServiceCost(key) || s[key] >= 100;
   });
-
   document.getElementById('svc-corruption-level').textContent = s.corruption + '/100';
   document.getElementById('svc-corruption-bar').style.width = s.corruption + '%';
   document.getElementById('svc-corruption-cost').textContent = getCorruptionCost();
   document.getElementById('svc-corruption-btn').disabled = state.money < getCorruptionCost() || s.corruption <= 0;
-
   const drain = (s.corruption * 0.04).toFixed(1);
   const bonus = (s.science * 0.08).toFixed(1);
   document.getElementById('svc-corruption-desc').textContent =
@@ -958,9 +1220,7 @@ function updateServicesPanel() {
 
 // ============ ЛОГИСТИКА ============
 function getTechCost(key) {
-  const base = TECH_CFG[key];
-  const lvl = state.tech[key];
-  return Math.round(base * Math.pow(1.35, lvl));
+  return Math.round(TECH_CFG[key] * Math.pow(1.35, state.tech[key]));
 }
 
 Object.keys(TECH_CFG).forEach(key => {
@@ -978,7 +1238,7 @@ Object.keys(TECH_CFG).forEach(key => {
 document.getElementById('mobilize-btn').addEventListener('click', () => {
   if (state.tech.mobilization < 1) return;
   if (state.mobilizeCooldown > 0) return;
-  CITIES.forEach(c => { if (c.owner === state.faction) c.garrison += 1; });
+  CITIES.forEach(c => { if (c.owner === state.faction) c.garrison.infantry = (c.garrison.infantry || 0) + 1; });
   state.welfare = Math.max(0, state.welfare - 5);
   state.mobilizeCooldown = 90;
   updateLogisticsPanel();
@@ -994,27 +1254,14 @@ function updateLogisticsPanel() {
     if (lvlEl) lvlEl.textContent = lvl;
     if (costEl) costEl.textContent = cost;
     if (btn) {
-      if (lvl >= 6) {
-        btn.textContent = '✅ Максимум';
-        btn.disabled = true;
-      } else {
-        btn.textContent = 'Вложить';
-        btn.disabled = state.money < cost;
-      }
+      if (lvl >= 6) { btn.textContent = '✅'; btn.disabled = true; }
+      else { btn.textContent = 'Вложить'; btn.disabled = state.money < cost; }
     }
   });
-
   const mobBtn = document.getElementById('mobilize-btn');
-  if (state.tech.mobilization < 1) {
-    mobBtn.disabled = true;
-    mobBtn.textContent = '📣 Мобилизация недоступна';
-  } else if (state.mobilizeCooldown > 0) {
-    mobBtn.disabled = true;
-    mobBtn.textContent = `⏳ Перезарядка ${Math.ceil(state.mobilizeCooldown)}с`;
-  } else {
-    mobBtn.disabled = false;
-    mobBtn.textContent = '📣 Мобилизация · призыв';
-  }
+  if (state.tech.mobilization < 1) { mobBtn.disabled = true; mobBtn.textContent = '📣 Мобилизация недоступна'; }
+  else if (state.mobilizeCooldown > 0) { mobBtn.disabled = true; mobBtn.textContent = `⏳ ${Math.ceil(state.mobilizeCooldown)}с`; }
+  else { mobBtn.disabled = false; mobBtn.textContent = '📣 Мобилизация · призыв'; }
 }
 
 // ============ ПРОИЗВОДСТВО ============
@@ -1068,13 +1315,14 @@ function updateProductionPanel() {
   document.getElementById('buy-weapons-btn').disabled = state.money < 200 || r.weapons >= RESOURCE_MAX.weapons;
 
   document.getElementById('res-tanks-count').textContent = `${Math.floor(r.tanks)}/${RESOURCE_MAX.tanks}`;
-  document.getElementById('res-tanks-prod').textContent = prod.tanks > 0
-    ? `производство +${prod.tanks.toFixed(2)}/с` : 'производство 0';
+  document.getElementById('res-tanks-prod').textContent = prod.tanks > 0 ? `производство +${prod.tanks.toFixed(2)}/с` : 'производство 0';
   document.getElementById('buy-tanks-btn').disabled = state.money < 160 || r.tanks >= RESOURCE_MAX.tanks;
 
   document.getElementById('res-fuel-count').textContent = `${Math.floor(r.fuel)}/${RESOURCE_MAX.fuel}`;
   document.getElementById('res-fuel-prod').textContent = `производство +${prod.fuel.toFixed(2)}/с`;
   document.getElementById('buy-fuel-btn').disabled = state.money < 160 || r.fuel >= RESOURCE_MAX.fuel;
+
+  document.getElementById('res-drones-count').textContent = `${Math.floor(r.drones)}/${RESOURCE_MAX.drones}`;
 
   const totals = { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 };
   CITIES.forEach(c => {
@@ -1087,6 +1335,40 @@ function updateProductionPanel() {
   document.getElementById('bld-weapon-total').textContent = totals.weaponFactory;
   document.getElementById('bld-tank-total').textContent = totals.tankFactory;
   document.getElementById('bld-oil-total').textContent = totals.oilWell;
+}
+
+// ============ АРМИЯ ============
+function updateArmyPanel() {
+  let garrisons = 0, inField = 0;
+  const byType = { infantry: 0, tanks: 0, aa: 0, missiles: 0, drones: 0 };
+
+  CITIES.forEach(c => {
+    if (c.owner !== state.faction) return;
+    UNIT_ORDER.forEach(k => {
+      const v = c.garrison[k] || 0;
+      garrisons += v;
+      byType[k] += v;
+    });
+  });
+
+  ACTIVE_ATTACKS.forEach(atk => {
+    if (atk.from.owner !== state.faction) return;
+    UNIT_ORDER.forEach(k => {
+      const v = atk.composition[k] || 0;
+      inField += v;
+      byType[k] += v;
+    });
+  });
+
+  document.getElementById('army-total').textContent = garrisons + inField;
+  document.getElementById('army-garrisons').textContent = garrisons;
+  document.getElementById('army-in-field').textContent = inField;
+
+  document.getElementById('army-infantry-count').textContent = byType.infantry;
+  document.getElementById('army-tanks-count').textContent = byType.tanks;
+  document.getElementById('army-aa-count').textContent = byType.aa;
+  document.getElementById('army-missiles-count').textContent = byType.missiles;
+  document.getElementById('army-drones-count').textContent = byType.drones;
 }
 
 // ============ СТРОИТЕЛЬСТВО ============
@@ -1145,8 +1427,161 @@ function closeBuildModal() {
   document.getElementById('build-modal').classList.add('hidden');
   buildCity = null;
 }
-
 document.getElementById('build-modal-close').addEventListener('click', closeBuildModal);
+
+// ============ АТАКИ / БОЙ ============
+function updateAttacks(dt) {
+  for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
+    const atk = ACTIVE_ATTACKS[i];
+    atk.progress += atk.speed * dt;
+    if (atk.progress >= 1) {
+      resolveBattle(atk.from, atk.to, atk.composition);
+      ACTIVE_ATTACKS.splice(i, 1);
+    }
+  }
+}
+
+function resolveBattle(fromCity, toCity, composition) {
+  const attackerGarrison = composition;
+  const defenderGarrison = { ...toCity.garrison };
+
+  const combatBonus = 1 + state.tech.combat * 0.12;
+  const armorBonus = 1 + state.tech.armor * 0.12;
+  const defenseMult = getDefenseMultiplier(toCity);
+
+  const attackPower = UNIT_ORDER.reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
+  const defensePower = UNIT_ORDER.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
+
+  const victory = attackPower > defensePower;
+  const attackerLosses = {};
+  const defenderLosses = {};
+  const survivors = { ...attackerGarrison };
+
+  if (victory) {
+    const ratio = defensePower / Math.max(0.01, attackPower);
+    const lossRatio = Math.min(1, ratio * 0.7);
+    UNIT_ORDER.forEach(k => {
+      const count = attackerGarrison[k] || 0;
+      const lost = Math.floor(count * lossRatio);
+      attackerLosses[k] = lost;
+      survivors[k] = count - lost;
+    });
+    UNIT_ORDER.forEach(k => {
+      const count = defenderGarrison[k] || 0;
+      const lost = Math.ceil(count * 0.85);
+      defenderLosses[k] = lost;
+    });
+    toCity.owner = state.faction;
+    toCity.garrison = { ...survivors };
+    toCity.fortification = Math.max(0, toCity.fortification - 1);
+    state.welfare -= 5;
+  } else {
+    const ratio = attackPower / Math.max(0.01, defensePower);
+    const lossRatio = Math.min(1, ratio * 0.9);
+    UNIT_ORDER.forEach(k => {
+      const count = attackerGarrison[k] || 0;
+      const lost = Math.ceil(count * lossRatio);
+      attackerLosses[k] = lost;
+      survivors[k] = count - lost;
+    });
+    UNIT_ORDER.forEach(k => {
+      if (survivors[k] > 0) fromCity.garrison[k] = (fromCity.garrison[k] || 0) + survivors[k];
+    });
+    UNIT_ORDER.forEach(k => {
+      const count = defenderGarrison[k] || 0;
+      const lost = Math.floor(count * 0.3);
+      defenderLosses[k] = lost;
+      toCity.garrison[k] = Math.max(0, count - lost);
+    });
+    state.welfare -= 8;
+  }
+
+  state.welfare = Math.max(0, Math.min(100, state.welfare));
+  showBattleResult(fromCity, toCity, victory, attackerGarrison, defenderGarrison, attackerLosses, defenderLosses);
+  checkVictory();
+}
+
+function showBattleResult(fromCity, toCity, victory, attacker, defender, attackerLosses, defenderLosses) {
+  const modal = document.getElementById('battle-modal');
+  const title = document.getElementById('battle-modal-title');
+  const body = document.getElementById('battle-modal-body');
+  const lang = state.settings.language;
+
+  title.textContent = `⚔️ ${lang === 'ru' ? 'Бой за' : 'Battle for'} ${toCity.name}`;
+
+  const fmtG = (g, losses) => UNIT_ORDER.filter(k => (g[k] || 0) > 0)
+    .map(k => `${UNIT_TYPES[k].icon}${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
+
+  body.innerHTML = `
+    <div class="battle-result ${victory ? 'battle-victory' : 'battle-defeat'}">
+      <h3>${victory ? '✅ ' + (lang === 'ru' ? 'ПОБЕДА' : 'VICTORY') : '💀 ' + (lang === 'ru' ? 'ПОРАЖЕНИЕ' : 'DEFEAT')}</h3>
+      <div style="color: #94a3b8; font-size: 12px; margin-top: 6px;">
+        ${victory ? `Захвачен ${toCity.name}` : `Отступили в ${fromCity.name}`}
+      </div>
+    </div>
+    <div class="battle-row"><span>Атакующий:</span><span>${fmtG(attacker, attackerLosses)}</span></div>
+    <div class="battle-row"><span>Защитник:</span><span>${fmtG(defender, defenderLosses)}</span></div>
+  `;
+  modal.classList.remove('hidden');
+}
+
+document.getElementById('battle-modal-close').addEventListener('click', () => {
+  document.getElementById('battle-modal').classList.add('hidden');
+});
+document.getElementById('battle-ok-btn').addEventListener('click', () => {
+  document.getElementById('battle-modal').classList.add('hidden');
+});
+
+// ============ WEATHER / DAY ============
+function getCurrentPhase() {
+  const t = state.dayTime % 1;
+  for (const phase of DAY_PHASES) {
+    if (t >= phase.start && t < phase.end) return phase;
+  }
+  return DAY_PHASES[0];
+}
+
+function getDayEffects() {
+  return DAY_EFFECTS[getCurrentPhase().key];
+}
+
+function getDarknessAlpha() {
+  const t = state.dayTime % 1;
+  let current = DAY_PHASES[0], next = DAY_PHASES[1];
+  for (let i = 0; i < DAY_PHASES.length; i++) {
+    if (t >= DAY_PHASES[i].start && t < DAY_PHASES[i].end) {
+      current = DAY_PHASES[i];
+      next = DAY_PHASES[(i + 1) % DAY_PHASES.length];
+      break;
+    }
+  }
+  const p = (t - current.start) / (current.end - current.start);
+  const cur = DAY_EFFECTS[current.key].darkness;
+  const nxt = DAY_EFFECTS[next.key].darkness;
+  if (p > 0.7) {
+    const b = (p - 0.7) / 0.3;
+    return cur + (nxt - cur) * b;
+  }
+  return cur;
+}
+
+function getSituation() {
+  const timeSince = state.globalTime - state.lastAttackTime;
+  const enemyAttacksOnUs = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.enemyFaction && atk.to.owner === state.faction);
+  const ourAttacks = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.faction);
+
+  const critical = enemyAttacksOnUs.some(atk => {
+    const defPower = getCityPower(atk.to) * getDefenseMultiplier(atk.to) * (1 + state.tech.armor * 0.12);
+    const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0) * (1 + state.tech.combat * 0.12);
+    return atkPower > defPower;
+  });
+
+  if (critical) return { icon: '💀', color: 'critical', ru: 'Критическая', en: 'Critical' };
+  if (enemyAttacksOnUs.length > 0) return { icon: '🔴', color: 'red', ru: 'Враг наступает', en: 'Enemy' };
+  if (ourAttacks.length > 0) return { icon: '🟡', color: 'yellow', ru: 'Напряжение', en: 'Tension' };
+  if (timeSince > 30) return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
+  return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
+}
 
 // ============ ИГРОВОЙ ЦИКЛ ============
 let lastTime = performance.now();
@@ -1154,21 +1589,12 @@ let lastTime = performance.now();
 function loop(now) {
   let dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
-
   if (!state.paused && !state.gameOver) update(dt * state.timeScale);
   updateHUD();
   renderMap();
 
   const actionsModal = document.getElementById('actions-modal');
-  if (!actionsModal.classList.contains('hidden')) {
-    const active = document.querySelector('.actions-tab.active');
-    if (active) {
-      if (active.dataset.tab === 'country') updateActionsPanel();
-      if (active.dataset.tab === 'services') updateServicesPanel();
-      if (active.dataset.tab === 'logistics') updateLogisticsPanel();
-      if (active.dataset.tab === 'production') updateProductionPanel();
-    }
-  }
+  if (!actionsModal.classList.contains('hidden')) updateCurrentTab();
 
   if (state.gameOver && !state.gameOverShown) {
     state.gameOverShown = true;
@@ -1193,6 +1619,8 @@ function calcIncome() {
   const corruptionMult = 1 - (state.services.corruption / 100) * 0.04;
   const economyMult = 1 + state.tech.economy * 0.20;
   const logisticsMult = 1 + state.tech.logistics * 0.10;
+  const weatherMult = WEATHER[state.weather].incomeMult;
+  const dayMult = getDayEffects().incomeMult;
 
   let cityIncome = 0;
   CITIES.forEach(c => {
@@ -1202,40 +1630,59 @@ function calcIncome() {
     cityIncome += c.baseIncome * (c.infrastructure / 100) + mine + factory;
   });
 
-  return cityIncome * taxMult * workersMult * welfareMult * scienceMult * corruptionMult * economyMult * logisticsMult;
+  return cityIncome * taxMult * workersMult * welfareMult * scienceMult * corruptionMult * economyMult * logisticsMult * weatherMult * dayMult;
 }
 
 function update(dt) {
   state.money += calcIncome() * dt;
+  state.globalTime += dt;
 
-  // Ресурсы — производство
+  // Погода
+  state.weatherTimer -= dt;
+  if (state.weatherTimer <= 0) {
+    state.weather = WEATHER_KEYS[Math.floor(Math.random() * WEATHER_KEYS.length)];
+    state.weatherDuration = 60 + Math.random() * 60;
+    state.weatherTimer = state.weatherDuration;
+  }
+
+  // День/ночь
+  state.dayTime += dt / DAY_CYCLE_DURATION;
+  if (state.dayTime >= 1) state.dayTime -= 1;
+
+  // Ресурсы
   const prod = calcResourceProduction();
   state.resources.ammo = Math.min(RESOURCE_MAX.ammo, Math.max(0, state.resources.ammo + (prod.ammo - 0.56) * dt));
   state.resources.weapons = Math.min(RESOURCE_MAX.weapons, state.resources.weapons + prod.weapons * dt);
   state.resources.tanks = Math.min(RESOURCE_MAX.tanks, state.resources.tanks + prod.tanks * dt);
   state.resources.fuel = Math.min(RESOURCE_MAX.fuel, Math.max(0, state.resources.fuel + (prod.fuel - 0.40) * dt));
 
+  // Дроны (собираются)
+  const droneBuild = state.tech.dronefactory * 0.04;
+  state.resources.drones = Math.min(RESOURCE_MAX.drones, state.resources.drones + droneBuild * dt);
+
   // Население
   const birthRate = 8.0 + state.tech.birth * 1.2;
-  const deathRate = 13.0;
+  const health = state.services.health;
+  const deathRate = 13.0 * (1 - health / 100 * 0.45);
   const popDelta = state.population * (birthRate - deathRate) / 1000 / 86400;
   state.population = Math.max(1e6, state.population + popDelta * dt);
 
-  // Благосостояние
-  let welfareDelta = -0.05;
-  if (state.taxRate > 0.30) welfareDelta -= (state.taxRate - 0.30) * 2;
-  if (state.taxRate < 0.20) welfareDelta += (0.20 - state.taxRate) * 1.5;
-  welfareDelta += state.tech.life * 0.07;
-  state.welfare = Math.max(0, Math.min(100, state.welfare + welfareDelta * dt));
-  state.welfareTrend = welfareDelta;
+  // Благо
+  let wd = -0.05;
+  if (state.taxRate > 0.30) wd -= (state.taxRate - 0.30) * 2;
+  if (state.taxRate < 0.20) wd += (0.20 - state.taxRate) * 1.5;
+  wd += state.tech.life * 0.07;
+  wd += WEATHER[state.weather].welfareDelta;
+  wd += getDayEffects().welfareDelta;
+  state.welfare = Math.max(0, Math.min(100, state.welfare + wd * dt));
+  state.welfareTrend = wd;
 
   // Коррупция
-  let corruptionDelta = 0.05;
-  corruptionDelta -= (state.services.science / 100) * 0.02;
-  corruptionDelta -= (state.services.order / 100) * 0.03;
-  state.services.corruption = Math.max(0, Math.min(100, state.services.corruption + corruptionDelta * dt));
+  let cd = 0.05;
+  cd -= (state.services.science / 100) * 0.02;
+  cd -= (state.services.order / 100) * 0.03;
+  state.services.corruption = Math.max(0, Math.min(100, state.services.corruption + cd * dt));
 
-  // КД мобилизации
   if (state.mobilizeCooldown > 0) state.mobilizeCooldown = Math.max(0, state.mobilizeCooldown - dt);
 
   updateAttacks(dt);
@@ -1246,7 +1693,6 @@ function update(dt) {
     state.gameOverText = 'Переворот. Вы свергнуты.';
     return;
   }
-
   checkVictory();
 }
 
@@ -1254,7 +1700,6 @@ function checkVictory() {
   if (state.gameOver) return;
   const playerCap = CITIES.find(c => c.type === 'capital' && c.owner === state.faction);
   const enemyCap = CITIES.find(c => c.type === 'capital' && c.owner === state.enemyFaction);
-
   if (!enemyCap) {
     state.gameOver = true;
     state.gameOverReason = 'victory';
@@ -1288,43 +1733,62 @@ function updateHUD() {
   corEl.textContent = Math.floor(state.services.corruption) + '%';
   corEl.classList.remove('cor-good', 'cor-mid', 'cor-bad');
   corEl.classList.add(state.services.corruption < 30 ? 'cor-good' : state.services.corruption < 60 ? 'cor-mid' : 'cor-bad');
+
+  // Время
+  const phase = getCurrentPhase();
+  const lang = state.settings.language;
+  document.getElementById('time-icon').textContent = phase.icon;
+  document.getElementById('time-name').textContent = lang === 'ru' ? phase.ru : phase.en;
+
+  // Погода
+  const weather = WEATHER[state.weather];
+  document.getElementById('weather-icon').textContent = weather.icon;
+  document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
+  document.getElementById('weather-effect').textContent = '×' + weather.speedMult.toFixed(1);
+
+  // Обстановка
+  const sit = getSituation();
+  document.getElementById('status-icon').textContent = sit.icon;
+  document.getElementById('status-name').textContent = lang === 'ru' ? sit.ru : sit.en;
+  document.getElementById('status-stat').className = 'stat status-stat status-' + sit.color;
 }
 
 // ============ РЕНДЕР ============
 function renderMap() {
   if (!canvas) return;
   const rect = canvas.getBoundingClientRect();
-  const w = rect.width;
-  const h = rect.height;
+  const w = rect.width, h = rect.height;
 
   ctx.fillStyle = '#0a0e1a';
   ctx.fillRect(0, 0, w, h);
-
   ctx.drawImage(worldCanvas, camera.x, camera.y, w / camera.zoom, h / camera.zoom, 0, 0, w, h);
 
   renderRoads();
   renderAttacks();
   renderCities();
+
+  // Затемнение ночью
+  const darkness = getDarknessAlpha();
+  if (darkness > 0.01) {
+    ctx.fillStyle = `rgba(5, 10, 25, ${darkness})`;
+    ctx.fillRect(0, 0, w, h);
+  }
 }
 
 function renderRoads() {
   const rect = canvas.getBoundingClientRect();
   const tileSize = MAP.TILE * camera.zoom;
-
   ROADS.forEach(road => {
     const a = road.from, b = road.to;
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
     const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
-
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
-
     const color = road.type === 'own' ? 'rgba(0, 212, 255, 0.4)'
                 : road.type === 'enemy' ? 'rgba(255, 59, 92, 0.4)'
                 : 'rgba(180, 190, 210, 0.35)';
-
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
     ctx.beginPath();
@@ -1373,7 +1837,6 @@ function renderAttacks() {
 function renderCities() {
   const tileSize = MAP.TILE * camera.zoom;
   const rect = canvas.getBoundingClientRect();
-
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -1382,11 +1845,8 @@ function renderCities() {
     const sy = (c.y * MAP.TILE - camera.y) * camera.zoom;
     if (sx < -100 || sx > rect.width + 100 || sy < -100 || sy > rect.height + 100) return;
 
-    const color = c.owner === 'aurora' ? '#00d4ff'
-                : c.owner === 'vesper' ? '#ff3b5c' : '#8892a6';
-
-    const radiusRatio = c.type === 'capital' ? 0.32 : c.type === 'large' ? 0.24
-                      : c.type === 'medium' ? 0.18 : 0.13;
+    const color = c.owner === 'aurora' ? '#00d4ff' : c.owner === 'vesper' ? '#ff3b5c' : '#8892a6';
+    const radiusRatio = c.type === 'capital' ? 0.32 : c.type === 'large' ? 0.24 : c.type === 'medium' ? 0.18 : 0.13;
     const radius = Math.max(3, tileSize * radiusRatio);
 
     ctx.shadowColor = color;
@@ -1416,11 +1876,21 @@ function renderCities() {
       ctx.fillText('⚠️', sx + tileSize / 2 + radius + 6, sy + tileSize / 2 - radius);
     }
 
+    // Сила гарнизона
+    const gTotal = getGarrisonTotal(c.garrison || {});
+    if (gTotal > 0 && camera.zoom > 0.7) {
+      ctx.font = `bold ${Math.max(9, 10 * camera.zoom)}px -apple-system, sans-serif`;
+      const txt = '⚔' + gTotal;
+      const w = ctx.measureText(txt).width;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(sx + tileSize / 2 - w/2 - 2, sy + tileSize / 2 - radius - 20, w + 4, 12);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(txt, sx + tileSize / 2, sy + tileSize / 2 - radius - 14);
+    }
+
     if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
-    const fontSize = Math.max(9,
-      (c.type === 'capital' ? 13 : c.type === 'large' ? 12 : c.type === 'medium' ? 11 : 10) * Math.max(0.8, camera.zoom)
-    );
+    const fontSize = Math.max(9, (c.type === 'capital' ? 13 : c.type === 'large' ? 12 : c.type === 'medium' ? 11 : 10) * Math.max(0.8, camera.zoom));
     ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
     ctx.textBaseline = 'top';
     const textX = sx + tileSize / 2;
@@ -1429,7 +1899,6 @@ function renderCities() {
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(textX - textWidth / 2 - 3, textY - 1, textWidth + 6, fontSize + 2);
-
     ctx.fillStyle = color;
     ctx.fillText(c.name, textX, textY);
   });
@@ -1494,7 +1963,6 @@ document.getElementById('pause-btn').addEventListener('click', e => {
 
 document.getElementById('zoom-in').addEventListener('click', () => zoomByCenter(1.25));
 document.getElementById('zoom-out').addEventListener('click', () => zoomByCenter(1 / 1.25));
-
 document.getElementById('city-list-btn').addEventListener('click', () => centerOnPlayerBase());
 
 document.getElementById('gameover-restart').addEventListener('click', () => {
