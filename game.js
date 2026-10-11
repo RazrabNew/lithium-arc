@@ -247,6 +247,7 @@ const state = {
   statusOverrideUntil: 0,
   warnedAboutAttack: false,
   captureEffects: [],
+  interceptEffects: [],
 };
 
 const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
@@ -475,16 +476,28 @@ function getRoadsFrom(city) {
 function getSecondLineTargets(fromCity, ownerFilter) {
   const result = new Set();
   const directNeighbors = getRoadsFrom(fromCity);
+  const enemyMidCities = directNeighbors.filter(c => c.owner === state.enemyFaction);
 
-  directNeighbors.forEach(mid => {
+  enemyMidCities.forEach(mid => {
     getRoadsFrom(mid).forEach(far => {
       if (far === fromCity) return;
       if (directNeighbors.includes(far)) return;
+      if (far.owner === state.faction) return;
       if (ownerFilter(far)) result.add(far);
     });
   });
 
   return Array.from(result);
+}
+
+function getIntermediateCities(source, target) {
+  const directNeighbors = getRoadsFrom(source);
+  const result = [];
+  directNeighbors.forEach(mid => {
+    if (mid === source || mid === target) return;
+    if (getRoadsFrom(mid).includes(target)) result.push(mid);
+  });
+  return result;
 }
 
 function generateRoads() {
@@ -514,9 +527,10 @@ function generateRoads() {
       .map(v => ({ city: v, dist: Math.hypot(v.x - aCity.x, v.y - aCity.y) }))
       .sort((a, b) => a.dist - b.dist);
     let borderLinks = 0;
+    const maxBorderLinks = aCity.type === 'capital' ? 3 : 2;
     for (const { city: vCity, dist } of enemyNeighbors) {
-      if (borderLinks >= 1) break;
-      if (dist > 10) break;
+      if (borderLinks >= maxBorderLinks) break;
+      if (dist > 12) break;
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
@@ -958,18 +972,15 @@ document.getElementById('attack-sources-close').addEventListener('click', closeA
 // ============ ОТПРАВКА ============
 let sendFromCity = null, sendToCity = null, sendComposition = null;
 
-// Атака — открывается выбор цели
 function openSendModal(fromCity, forcedTarget = null) {
   const directTargets = getRoadsFrom(fromCity).filter(c => c.owner !== state.faction);
   const secondLineTargets = getSecondLineTargets(fromCity, c => c.owner !== state.faction);
 
-  // Собираем все цели с указанием линии
   const allTargets = [
     ...directTargets.map(t => ({ city: t, line: 1 })),
     ...secondLineTargets.map(t => ({ city: t, line: 2 })),
   ];
 
-  // Убираем дубликаты (если цель на 1 линии, она не должна повторяться на 2)
   const uniqueTargets = [];
   const seen = new Set();
   allTargets.forEach(t => {
@@ -981,7 +992,9 @@ function openSendModal(fromCity, forcedTarget = null) {
   });
 
   if (forcedTarget) {
-    openSendCompositionModal(fromCity, forcedTarget, 1);
+    // Проверяем — прямая цель или 2 линия
+    const isDirect = directTargets.includes(forcedTarget);
+    openSendCompositionModal(fromCity, forcedTarget, isDirect ? 1 : 2);
     return;
   }
 
@@ -1144,7 +1157,6 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
   const update = () => {
     body.innerHTML = '';
 
-    // На 2 линии — только ракеты и дроны, и только один тип
     const hasMissiles = (sendComposition.missiles || 0) > 0;
     const hasDrones = (sendComposition.drones || 0) > 0;
 
@@ -1157,12 +1169,10 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
       const current = sendComposition[key] || 0;
       const ut = UNIT_TYPES[key];
 
-      // На 2 линии — блокируем второй тип
       let locked = false;
-      if (line === 2) {
-        if (key === 'missiles' && hasDrones) locked = true;
-        if (key === 'drones' && hasMissiles) locked = true;
-      }
+      // Ракеты и дроны взаимоисключающие — на любой линии
+      if (key === 'missiles' && hasDrones) locked = true;
+      if (key === 'drones' && hasMissiles) locked = true;
 
       const row = document.createElement('div');
       row.className = 'send-row';
@@ -1181,15 +1191,8 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
       body.appendChild(row);
     });
 
-    // Обнуляем то, что не нужно
     if (line === 2) {
       ['infantry', 'tanks', 'aa'].forEach(k => { sendComposition[k] = 0; });
-      // Если есть и ракеты и дроны — обнулим то, что добавили последним, но это защита
-      if ((sendComposition.missiles || 0) > 0 && (sendComposition.drones || 0) > 0) {
-        // Оставляем только ракеты (или дроны) — на выбор игрока
-        // Просто обнулим дроны, если игрок добавил ракеты первыми — не сработает, но пусть будет
-        // Лучше: не дать обнулить — блокировка уже есть
-      }
     } else {
       sendComposition.aa = 0;
     }
@@ -1203,6 +1206,21 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
 
     const summary = document.createElement('div');
     summary.className = 'send-summary';
+
+    let interceptWarning = '';
+    if (line === 2) {
+      const intermediates = getIntermediateCities(fromCity, toCity);
+      const enemyInters = intermediates.filter(m => m.owner === state.enemyFaction);
+      let totalAA = 0;
+      enemyInters.forEach(m => {
+        totalAA += m.garrison?.aa || 0;
+      });
+      if (totalAA > 0) {
+        const chance = Math.min(85, Math.round(totalAA * 15 * WEATHER[state.weather].aaMult));
+        interceptWarning = `<br><span style="color:#ff9500">⚠️ ПВО на маршруте: ${totalAA} ед · шанс сбития ${chance}%</span>`;
+      }
+    }
+
     summary.innerHTML = `
       Итого: <b>${totalUnits}</b> · Сила: <b>${totalPower.toFixed(1)}</b><br>
       <span style="color:${hasAmmo ? '#94a3b8' : '#ff3b5c'}">
@@ -1214,6 +1232,7 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
         <img class="svg-icon-inline" src="icons/oil-barrel.svg" alt="">
         ${cost.fuel.toFixed(1)} / ${Math.floor(state.resources.fuel)}
       </span>
+      ${interceptWarning}
     `;
     body.appendChild(summary);
 
@@ -1269,6 +1288,48 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     state.resources.fuel = Math.max(0, state.resources.fuel - cost.fuel);
   }
 
+  // ПВО-перехват (только для 2 линии)
+  if (!isTransfer && line === 2) {
+    const intermediateCities = getIntermediateCities(sendFromCity, sendToCity);
+    let totalIntercepted = 0;
+    let totalMissilesLost = 0;
+    let totalDronesLost = 0;
+
+    intermediateCities.forEach(mid => {
+      if (mid.owner === state.faction) return;
+      const result = applyInterception(sendComposition, mid);
+      totalIntercepted += result.intercepted;
+      totalMissilesLost += result.missilesLost;
+      totalDronesLost += result.dronesLost;
+
+      if (result.intercepted > 0) {
+        const t = 0.4;
+        const interceptX = sendFromCity.x + (sendToCity.x - sendFromCity.x) * t;
+        const interceptY = sendFromCity.y + (sendToCity.y - sendFromCity.y) * t;
+        createInterceptEffect(mid, sendToCity, interceptX, interceptY);
+      }
+    });
+
+    if (totalMissilesLost > 0) {
+      sendComposition.missiles = Math.max(0, (sendComposition.missiles || 0) - totalMissilesLost);
+    }
+    if (totalDronesLost > 0) {
+      sendComposition.drones = Math.max(0, (sendComposition.drones || 0) - totalDronesLost);
+    }
+
+    const remaining = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
+    if (remaining === 0) {
+      setEventMessage(`🚀 ПВО врага сбило всю атаку!`, 'danger');
+      document.getElementById('send-modal').classList.add('hidden');
+      sendFromCity = null; sendToCity = null; sendComposition = null;
+      return;
+    }
+
+    if (totalIntercepted > 0) {
+      setEventMessage(`🚀 ПВО врага сбило ${totalIntercepted} ед.`, 'warning');
+    }
+  }
+
   UNIT_ORDER.forEach(k => {
     sendFromCity.garrison[k] = Math.max(0, (sendFromCity.garrison[k] || 0) - (sendComposition[k] || 0));
   });
@@ -1302,6 +1363,52 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
   closeCityPanel();
   sendFromCity = null; sendToCity = null; sendComposition = null;
 });
+
+// ============ ПВО-ПЕРЕХВАТ ============
+function calcInterception(intermediateCity) {
+  const aaCount = intermediateCity.garrison?.aa || 0;
+  if (aaCount === 0) return { chance: 0, aaCount: 0 };
+
+  const defenderTech = intermediateCity.owner === state.faction ? state.tech.aa : 0;
+  const baseChance = aaCount * 0.15 + defenderTech * 0.05;
+  const weatherMult = WEATHER[state.weather].aaMult;
+  const chance = Math.min(0.85, baseChance * weatherMult);
+
+  return { chance, aaCount };
+}
+
+function applyInterception(composition, intermediateCity) {
+  const { chance } = calcInterception(intermediateCity);
+  if (chance <= 0) return { intercepted: 0, missilesLost: 0, dronesLost: 0 };
+
+  const missilesLoss = Math.random() < chance ? Math.ceil((composition.missiles || 0) * chance) : 0;
+  const dronesLoss = Math.random() < chance ? Math.ceil((composition.drones || 0) * chance) : 0;
+
+  const missilesLost = Math.min(missilesLoss, composition.missiles || 0);
+  const dronesLost = Math.min(dronesLoss, composition.drones || 0);
+
+  return {
+    intercepted: missilesLost + dronesLost,
+    missilesLost,
+    dronesLost,
+  };
+}
+
+function createInterceptEffect(sourceCity, targetCity, interceptX, interceptY) {
+  state.interceptEffects.push({
+    fromX: sourceCity.x * MAP.TILE + MAP.TILE / 2,
+    fromY: sourceCity.y * MAP.TILE + MAP.TILE / 2,
+    toX: interceptX * MAP.TILE + MAP.TILE / 2,
+    toY: interceptY * MAP.TILE + MAP.TILE / 2,
+    progress: 0,
+    startTime: 0,
+    phase: 'flying',
+    flightDuration: 1.0,
+    explosionDuration: 0.6,
+    explosionStart: 0,
+    color: '#ff3b5c',
+  });
+}
 
 // ============ НАЙМ ============
 let hireCity = null;
@@ -2172,6 +2279,7 @@ function renderMap() {
   renderAttacks();
   renderCities();
   renderCaptureEffects();
+  renderInterceptEffects();
   renderWeather();
 
   const darkness = getDarknessAlpha();
@@ -2235,6 +2343,98 @@ function renderCaptureEffects() {
 
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
+  }
+}
+
+function renderInterceptEffects() {
+  const now = performance.now();
+
+  for (let i = state.interceptEffects.length - 1; i >= 0; i--) {
+    const fx = state.interceptEffects[i];
+
+    if (fx.phase === 'flying') {
+      if (!fx.startTime) fx.startTime = now;
+      const elapsed = (now - fx.startTime) / 1000;
+      fx.progress = Math.min(1, elapsed / fx.flightDuration);
+
+      if (fx.progress >= 1) {
+        fx.phase = 'exploding';
+        fx.explosionStart = now;
+      }
+
+      const sx = (fx.fromX - camera.x) * camera.zoom;
+      const sy = (fx.fromY - camera.y) * camera.zoom;
+      const ex = (fx.toX - camera.x) * camera.zoom;
+      const ey = (fx.toY - camera.y) * camera.zoom;
+
+      const cx = sx + (ex - sx) * fx.progress;
+      const cy = sy + (ey - sy) * fx.progress;
+
+      ctx.strokeStyle = fx.color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = fx.color;
+      ctx.shadowColor = fx.color;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255, 200, 50, 0.7)';
+      ctx.beginPath();
+      ctx.arc(cx - (ex - sx) * 0.03, cy - (ey - sy) * 0.03, 2.5 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (fx.phase === 'exploding') {
+      const elapsed = (now - fx.explosionStart) / 1000;
+      const progress = elapsed / fx.explosionDuration;
+
+      if (progress >= 1) {
+        state.interceptEffects.splice(i, 1);
+        continue;
+      }
+
+      const sx = (fx.toX - camera.x) * camera.zoom;
+      const sy = (fx.toY - camera.y) * camera.zoom;
+
+      const radius = 25 * camera.zoom * progress;
+      const alpha = (1 - progress) * 0.9;
+
+      ctx.strokeStyle = '#ff9500';
+      ctx.lineWidth = 3 * camera.zoom * (1 - progress * 0.5);
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = '#ff9500';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (progress < 0.4) {
+        const flashAlpha = (1 - progress / 0.4) * 0.8;
+        ctx.globalAlpha = flashAlpha;
+        ctx.fillStyle = '#fff5cc';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 15 * camera.zoom * (1 - progress / 0.4), 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = flashAlpha * 0.7;
+        ctx.fillStyle = '#ff9500';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 20 * camera.zoom * (1 - progress / 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
   }
 }
 
@@ -2445,7 +2645,6 @@ function renderAttacks() {
       ? 0.4 + Math.sin(now / 150) * 0.3
       : 0.3;
 
-    // Стрелка: сплошная или пунктирная (для 2 линии)
     ctx.strokeStyle = color;
     ctx.globalAlpha = pulseAlpha;
     ctx.lineWidth = Math.max(2, 3 * camera.zoom);
@@ -2460,7 +2659,6 @@ function renderAttacks() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Пройденная часть
     ctx.globalAlpha = 1;
     ctx.shadowColor = color;
     ctx.shadowBlur = isTransfer ? 8 : (isEnemyAttackOnUs ? 20 : 14);
@@ -2471,7 +2669,6 @@ function renderAttacks() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Иконка
     const iconSize = Math.max(20, 26 * camera.zoom);
     const pulseScale = 1 + Math.sin(now / 400) * 0.08;
     const finalSize = iconSize * pulseScale;
@@ -2491,7 +2688,6 @@ function renderAttacks() {
       ctx.fillStyle = color;
       ctx.fillText('🔄', cx, cy + 1);
     } else {
-      // Определяем иконку
       const comp = atk.composition;
       const hasGround = (comp.infantry || 0) > 0 || (comp.tanks || 0) > 0 || (comp.aa || 0) > 0;
       const hasMissiles = (comp.missiles || 0) > 0;
@@ -2509,7 +2705,6 @@ function renderAttacks() {
         ctx.drawImage(img, cx - finalSize / 2 * 0.7, cy - finalSize / 2 * 0.7, finalSize * 0.7, finalSize * 0.7);
         ctx.restore();
       } else {
-        // Fallback
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(cx, cy, 6 * camera.zoom, 0, Math.PI * 2);
