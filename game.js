@@ -116,7 +116,6 @@ const LANG = {
   },
 };
 
-// UNIT TYPES
 const UNIT_TYPES = {
   infantry: { icon: 'soldier.svg', ru: 'Пехота', en: 'Infantry', cost: { weapons: 5, fuel: 0.5, money: 30 }, power: 1.0 },
   tanks:    { icon: 'tank.svg', ru: 'Танки', en: 'Tanks', cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
@@ -127,13 +126,13 @@ const UNIT_TYPES = {
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
 
+// Рода войск, участвующие в обычной атаке
+const ATTACK_UNITS = ['infantry', 'tanks'];
+
 // РАСХОД РЕСУРСОВ
 const UNIT_COST_PER_ATTACK = {
   infantry: { ammo: 3.0, fuel: 0 },
   tanks:    { ammo: 4.0, fuel: 3.0 },
-  aa:       { ammo: 6.0, fuel: 2.5 },
-  missiles: { ammo: 10.0, fuel: 4.0 },
-  drones:   { ammo: 2.0, fuel: 1.5 },
 };
 
 const UNIT_COST_PER_TRANSFER = {
@@ -146,8 +145,7 @@ const UNIT_COST_PER_TRANSFER = {
 
 function calcAttackCost(composition) {
   let ammo = 0, fuel = 0;
-  UNIT_ORDER.forEach(k => {
-    if (k === 'aa') return;
+  ATTACK_UNITS.forEach(k => {
     const count = composition[k] || 0;
     if (count === 0) return;
     const cost = UNIT_COST_PER_ATTACK[k];
@@ -225,7 +223,6 @@ const DAY_EFFECTS = {
   night: { incomeMult: 0.90, speedMult: 0.80, welfareDelta: -0.02, darkness: 0.55 },
 };
 
-// STATE
 const state = {
   settings: { language: 'ru', faction: null, difficulty: 'normal' },
   faction: null, enemyFaction: null, difficulty: null,
@@ -247,12 +244,10 @@ const state = {
   statusOverrideUntil: 0,
   warnedAboutAttack: false,
   captureEffects: [],
-  interceptEffects: [],
 };
 
 const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
 
-// MAP
 const MAP = { W: 40, H: 30, TILE: 40 };
 const WORLD_W = MAP.W * MAP.TILE;
 const WORLD_H = MAP.H * MAP.TILE;
@@ -264,7 +259,6 @@ let seed = 12345;
 function rand() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
 
 let canvas, ctx, dpr = window.devicePixelRatio || 1;
-let worldCanvas, worldCtx;
 let worldTextureCanvas, worldOverlayCanvas;
 let noiseGen;
 
@@ -276,7 +270,6 @@ const camera = {
   pinchCenterX: 0, pinchCenterY: 0,
 };
 
-// CONFIGS
 const SERVICES_CFG = {
   science: { baseCost: 130, increment: 8 },
   order: { baseCost: 95, increment: 8 },
@@ -343,7 +336,7 @@ function getTerrainColor(x, y, owner) {
   return `rgb(${Math.max(0, Math.min(255, r|0))},${Math.max(0, Math.min(255, g|0))},${Math.max(0, Math.min(255, b|0))})`;
 }
 
-// ============ EVENT MESSAGE ============
+// ============ EVENT ============
 function setEventMessage(text, type = 'info') {
   state.lastEventText = text;
   state.lastEventType = type;
@@ -473,33 +466,6 @@ function getRoadsFrom(city) {
   return ROADS.filter(r => r.from === city || r.to === city).map(r => r.from === city ? r.to : r.from);
 }
 
-function getSecondLineTargets(fromCity, ownerFilter) {
-  const result = new Set();
-  const directNeighbors = getRoadsFrom(fromCity);
-  const enemyMidCities = directNeighbors.filter(c => c.owner === state.enemyFaction);
-
-  enemyMidCities.forEach(mid => {
-    getRoadsFrom(mid).forEach(far => {
-      if (far === fromCity) return;
-      if (directNeighbors.includes(far)) return;
-      if (far.owner === state.faction) return;
-      if (ownerFilter(far)) result.add(far);
-    });
-  });
-
-  return Array.from(result);
-}
-
-function getIntermediateCities(source, target) {
-  const directNeighbors = getRoadsFrom(source);
-  const result = [];
-  directNeighbors.forEach(mid => {
-    if (mid === source || mid === target) return;
-    if (getRoadsFrom(mid).includes(target)) result.push(mid);
-  });
-  return result;
-}
-
 function generateRoads() {
   ROADS = [];
   const seen = new Set();
@@ -520,6 +486,8 @@ function generateRoads() {
       links++;
     }
   });
+
+  // Пограничные связи (1 на город Авроры)
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
   auroraCities.forEach(aCity => {
@@ -527,10 +495,9 @@ function generateRoads() {
       .map(v => ({ city: v, dist: Math.hypot(v.x - aCity.x, v.y - aCity.y) }))
       .sort((a, b) => a.dist - b.dist);
     let borderLinks = 0;
-    const maxBorderLinks = aCity.type === 'capital' ? 3 : 2;
     for (const { city: vCity, dist } of enemyNeighbors) {
-      if (borderLinks >= maxBorderLinks) break;
-      if (dist > 12) break;
+      if (borderLinks >= 1) break;
+      if (dist > 10) break;
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
@@ -699,7 +666,7 @@ function drawRiverOverlay(octx) {
   octx.stroke();
 }
 
-// ============ CANVAS / УПРАВЛЕНИЕ ============
+// ============ CANVAS ============
 function initCanvas() {
   canvas = document.getElementById('game');
   ctx = canvas.getContext('2d');
@@ -974,34 +941,16 @@ let sendFromCity = null, sendToCity = null, sendComposition = null;
 
 function openSendModal(fromCity, forcedTarget = null) {
   const directTargets = getRoadsFrom(fromCity).filter(c => c.owner !== state.faction);
-  const secondLineTargets = getSecondLineTargets(fromCity, c => c.owner !== state.faction);
-
-  const allTargets = [
-    ...directTargets.map(t => ({ city: t, line: 1 })),
-    ...secondLineTargets.map(t => ({ city: t, line: 2 })),
-  ];
-
-  const uniqueTargets = [];
-  const seen = new Set();
-  allTargets.forEach(t => {
-    const key = CITIES.indexOf(t.city) + '-' + t.line;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueTargets.push(t);
-    }
-  });
 
   if (forcedTarget) {
-    // Проверяем — прямая цель или 2 линия
-    const isDirect = directTargets.includes(forcedTarget);
-    openSendCompositionModal(fromCity, forcedTarget, isDirect ? 1 : 2);
+    openSendCompositionModal(fromCity, forcedTarget, 1);
     return;
   }
 
-  if (uniqueTargets.length === 0) return;
+  if (directTargets.length === 0) return;
 
-  if (uniqueTargets.length === 1) {
-    openSendCompositionModal(fromCity, uniqueTargets[0].city, uniqueTargets[0].line);
+  if (directTargets.length === 1) {
+    openSendCompositionModal(fromCity, directTargets[0], 1);
   } else {
     const dict = LANG[state.settings.language];
     const list = document.getElementById('attack-targets');
@@ -1009,21 +958,18 @@ function openSendModal(fromCity, forcedTarget = null) {
     panel.classList.remove('hidden');
     list.innerHTML = '';
 
-    uniqueTargets.forEach(({ city: target, line }) => {
+    directTargets.forEach(target => {
       const row = document.createElement('div');
       row.className = 'target-row';
-      const lineLabel = line === 2
-        ? `<span style="font-size:10px;color:#facc15;margin-left:6px">🎯 2-я линия</span>`
-        : '';
       row.innerHTML = `
         <div>
-          <div class="target-name">${target.name}${lineLabel}</div>
+          <div class="target-name">${target.name}</div>
           <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper} · Сила: ${getCityPower(target).toFixed(1)}</div>
         </div>
       `;
       row.addEventListener('click', () => {
         closeAttackTargetPanel();
-        openSendCompositionModal(fromCity, target, line);
+        openSendCompositionModal(fromCity, target, 1);
       });
       list.appendChild(row);
     });
@@ -1143,62 +1089,55 @@ function resolveTransfer(fromCity, toCity, composition) {
   setEventMessage(`✅ Подкрепление прибыло в ${toCity.name}`, 'success');
 }
 
-// ============ ОТПРАВКА — атака ============
+// ============ АТАКА ============
 function openSendCompositionModal(fromCity, toCity, line = 1) {
-  sendFromCity = fromCity; sendToCity = toCity;
+  sendFromCity = fromCity;
+  sendToCity = toCity;
   sendComposition = { ...fromCity.garrison };
+
   const modal = document.getElementById('send-modal');
   const title = document.getElementById('send-modal-title');
   const body = document.getElementById('send-modal-body');
   const lang = state.settings.language;
-  const lineLabel = line === 2 ? ' [2-я линия]' : '';
-  title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}${lineLabel}`;
+  title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}`;
 
   const update = () => {
     body.innerHTML = '';
 
-    const hasMissiles = (sendComposition.missiles || 0) > 0;
-    const hasDrones = (sendComposition.drones || 0) > 0;
+    // Обнуляем всё, что не участвует в обычной атаке
+    UNIT_ORDER.forEach(k => {
+      if (!ATTACK_UNITS.includes(k)) {
+        sendComposition[k] = 0;
+      }
+    });
 
-    UNIT_ORDER.forEach(key => {
-      if (key === 'aa') return;
-      if (line === 2 && key !== 'missiles' && key !== 'drones') return;
-
+    ATTACK_UNITS.forEach(key => {
       const available = fromCity.garrison[key] || 0;
       if (available === 0) return;
       const current = sendComposition[key] || 0;
       const ut = UNIT_TYPES[key];
 
-      let locked = false;
-      // Ракеты и дроны взаимоисключающие — на любой линии
-      if (key === 'missiles' && hasDrones) locked = true;
-      if (key === 'drones' && hasMissiles) locked = true;
+      const plusDisabled = current >= available;
+      const minusDisabled = current <= 0;
 
       const row = document.createElement('div');
       row.className = 'send-row';
-      row.style.opacity = locked ? '0.35' : '1';
       row.innerHTML = `
         <div class="send-row-name">
           <img class="svg-icon-inline" src="icons/${ut.icon}" alt="">
           ${lang === 'ru' ? ut.ru : ut.en} (${available})
         </div>
         <div class="send-row-controls">
-          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${current <= 0 || locked ? 'disabled' : ''}>−</button>
+          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${minusDisabled ? 'disabled' : ''}>−</button>
           <div class="send-row-value">${current}</div>
-          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${current >= available || locked ? 'disabled' : ''}>+</button>
+          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${plusDisabled ? 'disabled' : ''}>+</button>
         </div>
       `;
       body.appendChild(row);
     });
 
-    if (line === 2) {
-      ['infantry', 'tanks', 'aa'].forEach(k => { sendComposition[k] = 0; });
-    } else {
-      sendComposition.aa = 0;
-    }
-
-    const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
-    const totalPower = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
+    const totalUnits = ATTACK_UNITS.reduce((s, k) => s + (sendComposition[k] || 0), 0);
+    const totalPower = ATTACK_UNITS.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
     const cost = calcAttackCost(sendComposition);
 
     const hasAmmo = state.resources.ammo >= cost.ammo;
@@ -1206,21 +1145,6 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
 
     const summary = document.createElement('div');
     summary.className = 'send-summary';
-
-    let interceptWarning = '';
-    if (line === 2) {
-      const intermediates = getIntermediateCities(fromCity, toCity);
-      const enemyInters = intermediates.filter(m => m.owner === state.enemyFaction);
-      let totalAA = 0;
-      enemyInters.forEach(m => {
-        totalAA += m.garrison?.aa || 0;
-      });
-      if (totalAA > 0) {
-        const chance = Math.min(85, Math.round(totalAA * 15 * WEATHER[state.weather].aaMult));
-        interceptWarning = `<br><span style="color:#ff9500">⚠️ ПВО на маршруте: ${totalAA} ед · шанс сбития ${chance}%</span>`;
-      }
-    }
-
     summary.innerHTML = `
       Итого: <b>${totalUnits}</b> · Сила: <b>${totalPower.toFixed(1)}</b><br>
       <span style="color:${hasAmmo ? '#94a3b8' : '#ff3b5c'}">
@@ -1232,7 +1156,6 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
         <img class="svg-icon-inline" src="icons/oil-barrel.svg" alt="">
         ${cost.fuel.toFixed(1)} / ${Math.floor(state.resources.fuel)}
       </span>
-      ${interceptWarning}
     `;
     body.appendChild(summary);
 
@@ -1257,7 +1180,7 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
 
     document.getElementById('send-confirm-btn').disabled = totalUnits === 0 || !hasAmmo || !hasFuel;
     document.getElementById('send-confirm-btn').dataset.mode = 'attack';
-    document.getElementById('send-confirm-btn').dataset.line = line;
+    document.getElementById('send-confirm-btn').dataset.line = '1';
   };
   update();
   modal.classList.remove('hidden');
@@ -1274,7 +1197,6 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
   if (totalUnits === 0) return;
 
   const mode = document.getElementById('send-confirm-btn').dataset.mode || 'attack';
-  const line = parseInt(document.getElementById('send-confirm-btn').dataset.line || '1');
   const isTransfer = mode === 'transfer';
 
   if (isTransfer) {
@@ -1286,48 +1208,6 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     if (state.resources.ammo < cost.ammo || state.resources.fuel < cost.fuel) return;
     state.resources.ammo = Math.max(0, state.resources.ammo - cost.ammo);
     state.resources.fuel = Math.max(0, state.resources.fuel - cost.fuel);
-  }
-
-  // ПВО-перехват (только для 2 линии)
-  if (!isTransfer && line === 2) {
-    const intermediateCities = getIntermediateCities(sendFromCity, sendToCity);
-    let totalIntercepted = 0;
-    let totalMissilesLost = 0;
-    let totalDronesLost = 0;
-
-    intermediateCities.forEach(mid => {
-      if (mid.owner === state.faction) return;
-      const result = applyInterception(sendComposition, mid);
-      totalIntercepted += result.intercepted;
-      totalMissilesLost += result.missilesLost;
-      totalDronesLost += result.dronesLost;
-
-      if (result.intercepted > 0) {
-        const t = 0.4;
-        const interceptX = sendFromCity.x + (sendToCity.x - sendFromCity.x) * t;
-        const interceptY = sendFromCity.y + (sendToCity.y - sendFromCity.y) * t;
-        createInterceptEffect(mid, sendToCity, interceptX, interceptY);
-      }
-    });
-
-    if (totalMissilesLost > 0) {
-      sendComposition.missiles = Math.max(0, (sendComposition.missiles || 0) - totalMissilesLost);
-    }
-    if (totalDronesLost > 0) {
-      sendComposition.drones = Math.max(0, (sendComposition.drones || 0) - totalDronesLost);
-    }
-
-    const remaining = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
-    if (remaining === 0) {
-      setEventMessage(`🚀 ПВО врага сбило всю атаку!`, 'danger');
-      document.getElementById('send-modal').classList.add('hidden');
-      sendFromCity = null; sendToCity = null; sendComposition = null;
-      return;
-    }
-
-    if (totalIntercepted > 0) {
-      setEventMessage(`🚀 ПВО врага сбило ${totalIntercepted} ед.`, 'warning');
-    }
   }
 
   UNIT_ORDER.forEach(k => {
@@ -1345,7 +1225,7 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     progress: 0,
     speed: 0.1 * weather.speedMult * dayEff.speedMult * speedMult,
     type: isTransfer ? 'transfer' : 'attack',
-    line: line,
+    line: 1,
   });
 
   state.lastAttackTime = state.globalTime;
@@ -1353,62 +1233,14 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
   if (isTransfer) {
     setEventMessage(`🔄 Переброска: ${sendFromCity.name} → ${sendToCity.name}`, 'info');
   } else {
-    const lineLabel = line === 2 ? ' (2-я линия)' : '';
-    setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}${lineLabel}`, 'warning');
+    setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
   }
 
   document.getElementById('send-modal').classList.add('hidden');
   document.getElementById('send-confirm-btn').dataset.mode = 'attack';
-  document.getElementById('send-confirm-btn').dataset.line = '1';
   closeCityPanel();
   sendFromCity = null; sendToCity = null; sendComposition = null;
 });
-
-// ============ ПВО-ПЕРЕХВАТ ============
-function calcInterception(intermediateCity) {
-  const aaCount = intermediateCity.garrison?.aa || 0;
-  if (aaCount === 0) return { chance: 0, aaCount: 0 };
-
-  const defenderTech = intermediateCity.owner === state.faction ? state.tech.aa : 0;
-  const baseChance = aaCount * 0.15 + defenderTech * 0.05;
-  const weatherMult = WEATHER[state.weather].aaMult;
-  const chance = Math.min(0.85, baseChance * weatherMult);
-
-  return { chance, aaCount };
-}
-
-function applyInterception(composition, intermediateCity) {
-  const { chance } = calcInterception(intermediateCity);
-  if (chance <= 0) return { intercepted: 0, missilesLost: 0, dronesLost: 0 };
-
-  const missilesLoss = Math.random() < chance ? Math.ceil((composition.missiles || 0) * chance) : 0;
-  const dronesLoss = Math.random() < chance ? Math.ceil((composition.drones || 0) * chance) : 0;
-
-  const missilesLost = Math.min(missilesLoss, composition.missiles || 0);
-  const dronesLost = Math.min(dronesLoss, composition.drones || 0);
-
-  return {
-    intercepted: missilesLost + dronesLost,
-    missilesLost,
-    dronesLost,
-  };
-}
-
-function createInterceptEffect(sourceCity, targetCity, interceptX, interceptY) {
-  state.interceptEffects.push({
-    fromX: sourceCity.x * MAP.TILE + MAP.TILE / 2,
-    fromY: sourceCity.y * MAP.TILE + MAP.TILE / 2,
-    toX: interceptX * MAP.TILE + MAP.TILE / 2,
-    toY: interceptY * MAP.TILE + MAP.TILE / 2,
-    progress: 0,
-    startTime: 0,
-    phase: 'flying',
-    flightDuration: 1.0,
-    explosionDuration: 0.6,
-    explosionStart: 0,
-    color: '#ff3b5c',
-  });
-}
 
 // ============ НАЙМ ============
 let hireCity = null;
@@ -1810,7 +1642,7 @@ function closeBuildModal() {
 }
 document.getElementById('build-modal-close').addEventListener('click', closeBuildModal);
 
-// ============ АТАКИ / БОЙ ============
+// ============ АТАКИ ============
 function updateAttacks(dt) {
   for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
     const atk = ACTIVE_ATTACKS[i];
@@ -1833,10 +1665,7 @@ function resolveBattle(fromCity, toCity, composition) {
   const armorBonus = 1 + state.tech.armor * 0.12;
   const defenseMult = getDefenseMultiplier(toCity);
 
-  const attackPower = UNIT_ORDER
-    .filter(k => k !== 'aa')
-    .reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
-
+  const attackPower = ATTACK_UNITS.reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
   const defensePower = UNIT_ORDER.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
   const victory = attackPower > defensePower;
   const attackerLosses = {}, defenderLosses = {}, survivors = { ...attackerGarrison };
@@ -1934,7 +1763,7 @@ function getSituation() {
   const ourAttacks = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.faction && atk.type !== 'transfer');
   const critical = enemyAttacksOnUs.some(atk => {
     const defPower = getCityPower(atk.to) * getDefenseMultiplier(atk.to) * (1 + state.tech.armor * 0.12);
-    const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0) * (1 + state.tech.combat * 0.12);
+    const atkPower = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0) * (1 + state.tech.combat * 0.12);
     return atkPower > defPower;
   });
   if (critical) return { icon: '💀', color: 'critical', ru: 'Критическая', en: 'Critical' };
@@ -1947,7 +1776,7 @@ function getCityThreat(city) {
   let totalEnemyPower = 0;
   ACTIVE_ATTACKS.forEach(atk => {
     if (atk.to === city && atk.from.owner === state.enemyFaction && atk.type !== 'transfer') {
-      const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
+      const atkPower = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
       totalEnemyPower += atkPower;
     }
   });
@@ -1958,7 +1787,7 @@ function getCityThreat(city) {
   return 1;
 }
 
-// ============ ЭКГ-МОНИТОР ============
+// ============ ЭКГ ============
 let situationCtx = null;
 let situationPoints = [];
 let lastSituationDraw = 0;
@@ -2279,7 +2108,6 @@ function renderMap() {
   renderAttacks();
   renderCities();
   renderCaptureEffects();
-  renderInterceptEffects();
   renderWeather();
 
   const darkness = getDarknessAlpha();
@@ -2343,98 +2171,6 @@ function renderCaptureEffects() {
 
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
-  }
-}
-
-function renderInterceptEffects() {
-  const now = performance.now();
-
-  for (let i = state.interceptEffects.length - 1; i >= 0; i--) {
-    const fx = state.interceptEffects[i];
-
-    if (fx.phase === 'flying') {
-      if (!fx.startTime) fx.startTime = now;
-      const elapsed = (now - fx.startTime) / 1000;
-      fx.progress = Math.min(1, elapsed / fx.flightDuration);
-
-      if (fx.progress >= 1) {
-        fx.phase = 'exploding';
-        fx.explosionStart = now;
-      }
-
-      const sx = (fx.fromX - camera.x) * camera.zoom;
-      const sy = (fx.fromY - camera.y) * camera.zoom;
-      const ex = (fx.toX - camera.x) * camera.zoom;
-      const ey = (fx.toY - camera.y) * camera.zoom;
-
-      const cx = sx + (ex - sx) * fx.progress;
-      const cy = sy + (ey - sy) * fx.progress;
-
-      ctx.strokeStyle = fx.color;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = 0.6;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(cx, cy);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = fx.color;
-      ctx.shadowColor = fx.color;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 4 * camera.zoom, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255, 200, 50, 0.7)';
-      ctx.beginPath();
-      ctx.arc(cx - (ex - sx) * 0.03, cy - (ey - sy) * 0.03, 2.5 * camera.zoom, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (fx.phase === 'exploding') {
-      const elapsed = (now - fx.explosionStart) / 1000;
-      const progress = elapsed / fx.explosionDuration;
-
-      if (progress >= 1) {
-        state.interceptEffects.splice(i, 1);
-        continue;
-      }
-
-      const sx = (fx.toX - camera.x) * camera.zoom;
-      const sy = (fx.toY - camera.y) * camera.zoom;
-
-      const radius = 25 * camera.zoom * progress;
-      const alpha = (1 - progress) * 0.9;
-
-      ctx.strokeStyle = '#ff9500';
-      ctx.lineWidth = 3 * camera.zoom * (1 - progress * 0.5);
-      ctx.globalAlpha = alpha;
-      ctx.shadowColor = '#ff9500';
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-      ctx.stroke();
-
-      if (progress < 0.4) {
-        const flashAlpha = (1 - progress / 0.4) * 0.8;
-        ctx.globalAlpha = flashAlpha;
-        ctx.fillStyle = '#fff5cc';
-        ctx.beginPath();
-        ctx.arc(sx, sy, 15 * camera.zoom * (1 - progress / 0.4), 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.globalAlpha = flashAlpha * 0.7;
-        ctx.fillStyle = '#ff9500';
-        ctx.beginPath();
-        ctx.arc(sx, sy, 20 * camera.zoom * (1 - progress / 0.4), 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
-    }
   }
 }
 
@@ -2633,7 +2369,6 @@ function renderAttacks() {
     const isEnemyAttackOnUs = attacker === state.enemyFaction && b.owner === state.faction;
     const isOurAttack = attacker === state.faction;
     const isTransfer = atk.type === 'transfer';
-    const isSecondLine = atk.line === 2;
 
     let color;
     if (isTransfer) color = '#06b6d4';
@@ -2648,16 +2383,10 @@ function renderAttacks() {
     ctx.strokeStyle = color;
     ctx.globalAlpha = pulseAlpha;
     ctx.lineWidth = Math.max(2, 3 * camera.zoom);
-    if (isSecondLine) {
-      ctx.setLineDash([6, 6]);
-    } else {
-      ctx.setLineDash([]);
-    }
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
-    ctx.setLineDash([]);
 
     ctx.globalAlpha = 1;
     ctx.shadowColor = color;
@@ -2687,29 +2416,17 @@ function renderAttacks() {
       ctx.textBaseline = 'middle';
       ctx.fillStyle = color;
       ctx.fillText('🔄', cx, cy + 1);
+    } else if (apcImage && apcImage.complete && apcImage.naturalWidth > 0) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.drawImage(apcImage, cx - finalSize / 2 * 0.7, cy - finalSize / 2 * 0.7, finalSize * 0.7, finalSize * 0.7);
+      ctx.restore();
     } else {
-      const comp = atk.composition;
-      const hasGround = (comp.infantry || 0) > 0 || (comp.tanks || 0) > 0 || (comp.aa || 0) > 0;
-      const hasMissiles = (comp.missiles || 0) > 0;
-      const hasDrones = (comp.drones || 0) > 0;
-
-      let img = null;
-      if (!hasGround && hasMissiles && !hasDrones) img = missileImage;
-      else if (!hasGround && hasDrones && !hasMissiles) img = droneImage;
-      else img = apcImage;
-
-      if (img && img.complete && img.naturalWidth > 0) {
-        ctx.save();
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
-        ctx.drawImage(img, cx - finalSize / 2 * 0.7, cy - finalSize / 2 * 0.7, finalSize * 0.7, finalSize * 0.7);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 6 * camera.zoom, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     if (isEnemyAttackOnUs && !isTransfer) {
