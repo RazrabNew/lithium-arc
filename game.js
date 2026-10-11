@@ -125,6 +125,54 @@ const UNIT_TYPES = {
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
 
+// ============ РАСХОД РЕСУРСОВ ============
+const UNIT_COST_PER_ATTACK = {
+  infantry: { ammo: 3.0, fuel: 0 },
+  tanks:    { ammo: 4.0, fuel: 3.0 },
+  aa:       { ammo: 6.0, fuel: 2.5 },
+  missiles: { ammo: 10.0, fuel: 4.0 },
+  drones:   { ammo: 2.0, fuel: 1.5 },
+};
+
+const UNIT_COST_PER_TRANSFER = {
+  infantry: { ammo: 0, fuel: 0.5 },
+  tanks:    { ammo: 0, fuel: 2.0 },
+  aa:       { ammo: 0, fuel: 1.5 },
+  missiles: { ammo: 0, fuel: 2.5 },
+  drones:   { ammo: 0, fuel: 0.5 },
+};
+
+function calcAttackCost(composition) {
+  let ammo = 0, fuel = 0;
+  UNIT_ORDER.forEach(k => {
+    const count = composition[k] || 0;
+    if (count === 0) return;
+    const cost = UNIT_COST_PER_ATTACK[k];
+    ammo += cost.ammo * count;
+    fuel += cost.fuel * count;
+  });
+  return { ammo, fuel };
+}
+
+function calcTransferCost(composition) {
+  let fuel = 0;
+  UNIT_ORDER.forEach(k => {
+    const count = composition[k] || 0;
+    if (count === 0) return;
+    fuel += UNIT_COST_PER_TRANSFER[k].fuel * count;
+  });
+  return { ammo: 0, fuel };
+}
+
+// ============ ИКОНКА БМП ============
+let apcImage = null;
+
+function loadApсImage() {
+  apcImage = new Image();
+  apcImage.src = 'icons/apc.png';
+}
+
+// ============ ГАРНИЗОН ============
 function makeStartingGarrison() { return { infantry: 5, tanks: 2, aa: 0, missiles: 0, drones: 0 }; }
 function makeEmptyGarrison() { return { infantry: 0, tanks: 0, aa: 0, missiles: 0, drones: 0 }; }
 
@@ -524,7 +572,6 @@ function generateOverlayCanvas() {
     octx.fill();
   });
 
-  // Волнистые границы регионов
   octx.strokeStyle = 'rgba(15, 20, 30, 0.9)';
   octx.lineWidth = 1.5;
 
@@ -557,7 +604,6 @@ function generateOverlayCanvas() {
     octx.stroke();
   });
 
-  // Границы фракций
   for (let i = 0; i < CITIES.length; i++) {
     for (const j of voronoi.neighbors(i)) {
       if (i >= j) continue;
@@ -793,6 +839,7 @@ function openCityPanel(city) {
   document.getElementById('city-strategic').style.color = isStrategic ? '#ff3b5c' : '';
 
   const attackBtn = document.getElementById('city-attack-btn');
+  const transferBtn = document.getElementById('city-transfer-btn');
   const hireBtn = document.getElementById('city-hire-btn');
   const fortifyBtn = document.getElementById('city-fortify-btn');
   const buildBtn = document.getElementById('city-build-btn');
@@ -800,6 +847,17 @@ function openCityPanel(city) {
   if (isOwn) {
     attackBtn.disabled = !canAttack(city);
     attackBtn.onclick = () => openSendModal(city);
+
+    transferBtn.style.display = 'flex';
+    const ownTargets = getRoadsFrom(city).filter(c => c.owner === state.faction);
+    if (ownTargets.length > 0 && getGarrisonTotal(city.garrison) > 0) {
+      transferBtn.disabled = false;
+      transferBtn.onclick = () => openTransferModal(city);
+    } else {
+      transferBtn.disabled = true;
+      transferBtn.onclick = null;
+    }
+
     hireBtn.style.display = 'flex';
     hireBtn.disabled = false;
     hireBtn.onclick = () => openHireModal(city);
@@ -826,7 +884,10 @@ function openCityPanel(city) {
       attackBtn.disabled = true;
       attackBtn.onclick = null;
     }
-    hireBtn.style.display = 'none'; fortifyBtn.style.display = 'none'; buildBtn.style.display = 'none';
+    hireBtn.style.display = 'none';
+    fortifyBtn.style.display = 'none';
+    buildBtn.style.display = 'none';
+    transferBtn.style.display = 'none';
   }
 }
 function closeCityPanel() {
@@ -917,14 +978,47 @@ function openSendModal(fromCity) {
   }
 }
 
-function openSendCompositionModal(fromCity, toCity) {
-  sendFromCity = fromCity; sendToCity = toCity;
+// ============ ПЕРЕБРОСКА ============
+function openTransferModal(fromCity) {
+  const targets = getRoadsFrom(fromCity).filter(c => c.owner === state.faction);
+  if (targets.length === 0) return;
+
+  if (targets.length === 1) {
+    openTransferCompositionModal(fromCity, targets[0]);
+  } else {
+    const list = document.getElementById('attack-targets');
+    const panel = document.getElementById('attack-target-panel');
+    panel.classList.remove('hidden');
+    list.innerHTML = '';
+
+    targets.forEach(target => {
+      const row = document.createElement('div');
+      row.className = 'target-row';
+      row.innerHTML = `
+        <div>
+          <div class="target-name">🔄 ${target.name}</div>
+          <div class="target-info">Гарнизон: ${getGarrisonTotal(target.garrison)} · Сила: ${getCityPower(target).toFixed(1)}</div>
+        </div>
+      `;
+      row.addEventListener('click', () => {
+        closeAttackTargetPanel();
+        openTransferCompositionModal(fromCity, target);
+      });
+      list.appendChild(row);
+    });
+  }
+}
+
+function openTransferCompositionModal(fromCity, toCity) {
+  sendFromCity = fromCity;
+  sendToCity = toCity;
   sendComposition = { ...fromCity.garrison };
+
   const modal = document.getElementById('send-modal');
   const title = document.getElementById('send-modal-title');
   const body = document.getElementById('send-modal-body');
   const lang = state.settings.language;
-  title.textContent = `${fromCity.name} → ${toCity.name}`;
+  title.textContent = `🔄 ${fromCity.name} → ${toCity.name}`;
 
   const update = () => {
     body.innerHTML = '';
@@ -948,12 +1042,29 @@ function openSendCompositionModal(fromCity, toCity) {
       `;
       body.appendChild(row);
     });
+
     const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
-    const totalPower = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
+    const cost = calcTransferCost(sendComposition);
+    const hasFuel = state.resources.fuel >= cost.fuel;
+
     const summary = document.createElement('div');
     summary.className = 'send-summary';
-    summary.innerHTML = `Итого: <b>${totalUnits}</b> · Сила: <b>${totalPower.toFixed(1)}</b>`;
+    summary.innerHTML = `
+      Перебрасывается: <b>${totalUnits}</b> юнитов<br>
+      <span style="color:${hasFuel ? '#94a3b8' : '#ff3b5c'}">
+        <img class="svg-icon-inline" src="icons/oil-barrel.svg" alt="">
+        топливо: ${cost.fuel.toFixed(1)} / ${Math.floor(state.resources.fuel)}
+      </span>
+    `;
     body.appendChild(summary);
+
+    if (!hasFuel) {
+      const warn = document.createElement('div');
+      warn.className = 'send-warning';
+      warn.innerHTML = `⚠️ Не хватает топлива: ${(cost.fuel - state.resources.fuel).toFixed(1)}`;
+      body.appendChild(warn);
+    }
+
     body.querySelectorAll('.send-row-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const unit = btn.dataset.unit;
@@ -962,7 +1073,100 @@ function openSendCompositionModal(fromCity, toCity) {
         update();
       });
     });
-    document.getElementById('send-confirm-btn').disabled = totalUnits === 0;
+
+    document.getElementById('send-confirm-btn').disabled = totalUnits === 0 || !hasFuel;
+    document.getElementById('send-confirm-btn').dataset.mode = 'transfer';
+  };
+  update();
+  modal.classList.remove('hidden');
+}
+
+function resolveTransfer(fromCity, toCity, composition) {
+  UNIT_ORDER.forEach(k => {
+    if ((composition[k] || 0) > 0) {
+      toCity.garrison[k] = (toCity.garrison[k] || 0) + (composition[k] || 0);
+    }
+  });
+  setEventMessage(`✅ Подкрепление прибыло в ${toCity.name}`, 'success');
+}
+
+// ============ ОТПРАВКА — атака ============
+function openSendCompositionModal(fromCity, toCity) {
+  sendFromCity = fromCity; sendToCity = toCity;
+  sendComposition = { ...fromCity.garrison };
+  const modal = document.getElementById('send-modal');
+  const title = document.getElementById('send-modal-title');
+  const body = document.getElementById('send-modal-body');
+  const lang = state.settings.language;
+  title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}`;
+
+  const update = () => {
+    body.innerHTML = '';
+    UNIT_ORDER.forEach(key => {
+      const available = fromCity.garrison[key] || 0;
+      if (available === 0) return;
+      const current = sendComposition[key] || 0;
+      const ut = UNIT_TYPES[key];
+      const row = document.createElement('div');
+      row.className = 'send-row';
+      row.innerHTML = `
+        <div class="send-row-name">
+          <img class="svg-icon-inline" src="icons/${ut.icon}" alt="">
+          ${lang === 'ru' ? ut.ru : ut.en} (${available})
+        </div>
+        <div class="send-row-controls">
+          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${current <= 0 ? 'disabled' : ''}>−</button>
+          <div class="send-row-value">${current}</div>
+          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${current >= available ? 'disabled' : ''}>+</button>
+        </div>
+      `;
+      body.appendChild(row);
+    });
+
+    const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
+    const totalPower = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
+    const cost = calcAttackCost(sendComposition);
+
+    const hasAmmo = state.resources.ammo >= cost.ammo;
+    const hasFuel = state.resources.fuel >= cost.fuel;
+
+    const summary = document.createElement('div');
+    summary.className = 'send-summary';
+    summary.innerHTML = `
+      Итого: <b>${totalUnits}</b> · Сила: <b>${totalPower.toFixed(1)}</b><br>
+      <span style="color:${hasAmmo ? '#94a3b8' : '#ff3b5c'}">
+        <img class="svg-icon-inline" src="icons/ammo.svg" alt="">
+        ${cost.ammo.toFixed(1)} / ${Math.floor(state.resources.ammo)}
+      </span>
+      &nbsp;·&nbsp;
+      <span style="color:${hasFuel ? '#94a3b8' : '#ff3b5c'}">
+        <img class="svg-icon-inline" src="icons/oil-barrel.svg" alt="">
+        ${cost.fuel.toFixed(1)} / ${Math.floor(state.resources.fuel)}
+      </span>
+    `;
+    body.appendChild(summary);
+
+    if (!hasAmmo || !hasFuel) {
+      const warn = document.createElement('div');
+      warn.className = 'send-warning';
+      const missing = [];
+      if (!hasAmmo) missing.push(`боеприпасов ${(cost.ammo - state.resources.ammo).toFixed(1)}`);
+      if (!hasFuel) missing.push(`топлива ${(cost.fuel - state.resources.fuel).toFixed(1)}`);
+      warn.innerHTML = `⚠️ Не хватает: ${missing.join(', ')}`;
+      body.appendChild(warn);
+    }
+
+    body.querySelectorAll('.send-row-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const unit = btn.dataset.unit;
+        const delta = parseInt(btn.dataset.delta);
+        sendComposition[unit] = Math.max(0, Math.min(fromCity.garrison[unit] || 0, (sendComposition[unit] || 0) + delta));
+        update();
+      });
+    });
+
+    document.getElementById('send-confirm-btn').disabled = totalUnits === 0 || !hasAmmo || !hasFuel;
+    document.getElementById('send-confirm-btn').dataset.mode = 'attack';
   };
   update();
   modal.classList.remove('hidden');
@@ -977,20 +1181,48 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
   if (!sendFromCity || !sendToCity || !sendComposition) return;
   const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
   if (totalUnits === 0) return;
+
+  const mode = document.getElementById('send-confirm-btn').dataset.mode || 'attack';
+  const isTransfer = mode === 'transfer';
+
+  if (isTransfer) {
+    const cost = calcTransferCost(sendComposition);
+    if (state.resources.fuel < cost.fuel) return;
+    state.resources.fuel = Math.max(0, state.resources.fuel - cost.fuel);
+  } else {
+    const cost = calcAttackCost(sendComposition);
+    if (state.resources.ammo < cost.ammo || state.resources.fuel < cost.fuel) return;
+    state.resources.ammo = Math.max(0, state.resources.ammo - cost.ammo);
+    state.resources.fuel = Math.max(0, state.resources.fuel - cost.fuel);
+  }
+
   UNIT_ORDER.forEach(k => {
     sendFromCity.garrison[k] = Math.max(0, (sendFromCity.garrison[k] || 0) - (sendComposition[k] || 0));
   });
+
   const weather = WEATHER[state.weather];
   const dayEff = getDayEffects();
+  const speedMult = isTransfer ? 1.6 : 1.0;
+
   ACTIVE_ATTACKS.push({
-    from: sendFromCity, to: sendToCity,
+    from: sendFromCity,
+    to: sendToCity,
     composition: { ...sendComposition },
     progress: 0,
-    speed: 0.1 * weather.speedMult * dayEff.speedMult,
+    speed: 0.1 * weather.speedMult * dayEff.speedMult * speedMult,
+    type: isTransfer ? 'transfer' : 'attack',
   });
+
   state.lastAttackTime = state.globalTime;
-  setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
+
+  if (isTransfer) {
+    setEventMessage(`🔄 Переброска: ${sendFromCity.name} → ${sendToCity.name}`, 'info');
+  } else {
+    setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
+  }
+
   document.getElementById('send-modal').classList.add('hidden');
+  document.getElementById('send-confirm-btn').dataset.mode = 'attack';
   closeCityPanel();
   sendFromCity = null; sendToCity = null; sendComposition = null;
 });
@@ -1392,7 +1624,11 @@ function updateAttacks(dt) {
     const atk = ACTIVE_ATTACKS[i];
     atk.progress += atk.speed * dt;
     if (atk.progress >= 1) {
-      resolveBattle(atk.from, atk.to, atk.composition);
+      if (atk.type === 'transfer') {
+        resolveTransfer(atk.from, atk.to, atk.composition);
+      } else {
+        resolveBattle(atk.from, atk.to, atk.composition);
+      }
       ACTIVE_ATTACKS.splice(i, 1);
     }
   }
@@ -1485,8 +1721,8 @@ function getDarknessAlpha() {
 
 function getSituation() {
   const timeSince = state.globalTime - state.lastAttackTime;
-  const enemyAttacksOnUs = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.enemyFaction && atk.to.owner === state.faction);
-  const ourAttacks = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.faction);
+  const enemyAttacksOnUs = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.enemyFaction && atk.to.owner === state.faction && atk.type !== 'transfer');
+  const ourAttacks = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.faction && atk.type !== 'transfer');
   const critical = enemyAttacksOnUs.some(atk => {
     const defPower = getCityPower(atk.to) * getDefenseMultiplier(atk.to) * (1 + state.tech.armor * 0.12);
     const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0) * (1 + state.tech.combat * 0.12);
@@ -1495,14 +1731,13 @@ function getSituation() {
   if (critical) return { icon: '💀', color: 'critical', ru: 'Критическая', en: 'Critical' };
   if (enemyAttacksOnUs.length > 0) return { icon: '🔴', color: 'red', ru: 'Враг наступает', en: 'Enemy' };
   if (ourAttacks.length > 0) return { icon: '🟡', color: 'yellow', ru: 'Напряжение', en: 'Tension' };
-  if (timeSince > 30) return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
   return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
 }
 
 function getCityThreat(city) {
   let totalEnemyPower = 0;
   ACTIVE_ATTACKS.forEach(atk => {
-    if (atk.to === city && atk.from.owner === state.enemyFaction) {
+    if (atk.to === city && atk.from.owner === state.enemyFaction && atk.type !== 'transfer') {
       const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
       totalEnemyPower += atkPower;
     }
@@ -1514,7 +1749,7 @@ function getCityThreat(city) {
   return 1;
 }
 
-// ============ ЭКГ-МОНИТОР ОБСТАНОВКИ ============
+// ============ ЭКГ-МОНИТОР ============
 let situationCtx = null;
 let situationPoints = [];
 let lastSituationDraw = 0;
@@ -1707,9 +1942,8 @@ function update(dt) {
 
   updateAttacks(dt);
 
-  // Авто-предупреждение о вражеской атаке
   const incomingEnemyAttack = ACTIVE_ATTACKS.find(atk =>
-    atk.from.owner === state.enemyFaction && atk.to.owner === state.faction
+    atk.from.owner === state.enemyFaction && atk.to.owner === state.faction && atk.type !== 'transfer'
   );
   if (incomingEnemyAttack && !state.warnedAboutAttack) {
     state.warnedAboutAttack = true;
@@ -1794,10 +2028,8 @@ function updateHUD() {
   document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
   document.getElementById('weather-effect').textContent = 'скорость ×' + weather.speedMult.toFixed(1);
 
-  // Обстановка — только временные сообщения
   const sitLabel = document.getElementById('situation-label');
   const sitStatus = document.getElementById('situation-status');
-
   const now = performance.now();
   let displayText = '';
   let displayColor = 'idle';
@@ -1838,7 +2070,6 @@ function renderMap() {
   renderRoads();
   renderAttacks();
   renderCities();
-
   renderWeather();
 
   const darkness = getDarknessAlpha();
@@ -1852,7 +2083,6 @@ function renderMap() {
 
 function renderGrid(w, h) {
   if (camera.zoom < 0.5) return;
-
   const step = MAP.TILE * 2;
   const alpha = camera.zoom > 1.2 ? 0.20 : camera.zoom > 0.8 ? 0.14 : 0.09;
 
@@ -2045,13 +2275,17 @@ function renderAttacks() {
     const attacker = atk.from.owner;
     const isEnemyAttackOnUs = attacker === state.enemyFaction && b.owner === state.faction;
     const isOurAttack = attacker === state.faction;
+    const isTransfer = atk.type === 'transfer';
 
     let color;
-    if (isEnemyAttackOnUs) color = '#ff3b5c';
+    if (isTransfer) color = '#06b6d4';
+    else if (isEnemyAttackOnUs) color = '#ff3b5c';
     else if (isOurAttack) color = '#00ff88';
     else color = '#ff9500';
 
-    const pulseAlpha = isEnemyAttackOnUs ? 0.4 + Math.sin(now / 150) * 0.3 : 0.3;
+    const pulseAlpha = (isEnemyAttackOnUs && !isTransfer)
+      ? 0.4 + Math.sin(now / 150) * 0.3
+      : 0.3;
 
     ctx.strokeStyle = color;
     ctx.globalAlpha = pulseAlpha;
@@ -2063,7 +2297,7 @@ function renderAttacks() {
 
     ctx.globalAlpha = 1;
     ctx.shadowColor = color;
-    ctx.shadowBlur = isEnemyAttackOnUs ? 20 : 14;
+    ctx.shadowBlur = isTransfer ? 8 : (isEnemyAttackOnUs ? 20 : 14);
     ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -2071,25 +2305,47 @@ function renderAttacks() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    const pointSize = isEnemyAttackOnUs ? 8 + Math.sin(now / 150) * 2 : 6 + Math.sin(now / 200) * 1;
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = isEnemyAttackOnUs ? 20 : 14;
-    ctx.beginPath();
-    ctx.arc(cx, cy, pointSize * camera.zoom, 0, Math.PI * 2);
-    ctx.fill();
+    const iconSize = Math.max(20, 26 * camera.zoom);
+    const pulseScale = 1 + Math.sin(now / 400) * 0.08;
+    const finalSize = iconSize * pulseScale;
 
-    if (isEnemyAttackOnUs) {
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.85)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, 2 * camera.zoom);
+    ctx.beginPath();
+    ctx.arc(cx, cy, finalSize / 2 + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (isTransfer) {
+      ctx.font = `${finalSize * 0.7}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.fillText('🔄', cx, cy + 1);
+    } else if (apcImage && apcImage.complete) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.drawImage(apcImage, cx - finalSize / 2 * 0.7, cy - finalSize / 2 * 0.7, finalSize * 0.7, finalSize * 0.7);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (isEnemyAttackOnUs && !isTransfer) {
       const ringPulse = 1 + Math.sin(now / 150) * 0.4;
       ctx.strokeStyle = color;
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.arc(cx, cy, 10 * camera.zoom * ringPulse, 0, Math.PI * 2);
+      ctx.arc(cx, cy, (finalSize / 2 + 6) * ringPulse, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    ctx.shadowBlur = 0;
   });
 }
 
@@ -2110,7 +2366,6 @@ function renderCities() {
 
     renderCityShadow(sx + tileSize / 2, sy + tileSize / 2, radius);
 
-    // Пульс угрозы
     const threat = getCityThreat(c);
     if (threat > 0) {
       const now = performance.now();
@@ -2208,6 +2463,7 @@ function startGame() {
   generateRoads();
   generateWorldCanvas();
 
+  loadApсImage();
   initCanvas();
   initCameraControls();
   centerOnPlayerBase();
