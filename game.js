@@ -2599,49 +2599,13 @@ function renderAttacks() {
     else if (isOurAttack) color = '#00ff88';
     else color = '#ff9500';
 
+    // Фаза боя: только статичный значок БМП над городом
     if (atk.phase === 'battle') {
       const sx = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
       const sy = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
 
       const iconSize = Math.max(20, 26 * camera.zoom);
-      const pulseScale = 1 + Math.sin(now / 200) * 0.15;
-      const finalSize = iconSize * pulseScale;
-
-      for (let i = 0; i < 3; i++) {
-        if (Math.random() < 0.4) {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = Math.random() * 30 * camera.zoom;
-          const fx = sx + Math.cos(angle) * dist;
-          const fy = sy + Math.sin(angle) * dist;
-          ctx.fillStyle = Math.random() < 0.5 ? '#ff9500' : '#ff3b5c';
-          ctx.globalAlpha = 0.6 + Math.random() * 0.4;
-          ctx.shadowColor = ctx.fillStyle;
-          ctx.shadowBlur = 15;
-          ctx.beginPath();
-          ctx.arc(fx, fy, 2 + Math.random() * 4 * camera.zoom, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.globalAlpha = 1;
-        }
-      }
-
-      for (let i = 0; i < 2; i++) {
-        if (Math.random() < 0.3) {
-          const angle = Math.random() * Math.PI * 2;
-          const len = 15 + Math.random() * 25 * camera.zoom;
-          const ex = sx + Math.cos(angle) * len;
-          const ey = sy + Math.sin(angle) * len;
-
-          ctx.strokeStyle = Math.random() < 0.7 ? '#ffcc00' : '#ff3b5c';
-          ctx.lineWidth = 1.5;
-          ctx.globalAlpha = 0.5 + Math.random() * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(ex, ey);
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-        }
-      }
+      const offset = 20 * camera.zoom;
 
       ctx.fillStyle = 'rgba(10, 15, 25, 0.9)';
       ctx.strokeStyle = color;
@@ -2649,15 +2613,18 @@ function renderAttacks() {
       ctx.shadowColor = color;
       ctx.shadowBlur = 15;
       ctx.beginPath();
-      ctx.arc(sx + 20 * camera.zoom, sy - 20 * camera.zoom, finalSize / 2 + 2, 0, Math.PI * 2);
+      ctx.arc(sx + offset, sy - offset, iconSize / 2 + 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       if (apcImage && apcImage.complete && apcImage.naturalWidth > 0) {
-        ctx.drawImage(apcImage,
-          sx + 20 * camera.zoom - finalSize / 2 * 0.7,
-          sy - 20 * camera.zoom - finalSize / 2 * 0.7,
-          finalSize * 0.7, finalSize * 0.7);
+        ctx.drawImage(
+          apcImage,
+          sx + offset - iconSize / 2 * 0.7,
+          sy - offset - iconSize / 2 * 0.7,
+          iconSize * 0.7,
+          iconSize * 0.7
+        );
       }
       ctx.shadowBlur = 0;
 
@@ -2797,16 +2764,7 @@ function renderCities() {
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
-    const gTotal = getGarrisonTotal(c.garrison || {});
-    if (gTotal > 0 && camera.zoom > 0.7) {
-      ctx.font = `bold ${Math.max(9, 10 * camera.zoom)}px -apple-system, sans-serif`;
-      const txt = '⚔' + gTotal;
-      const w = ctx.measureText(txt).width;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(sx + tileSize / 2 - w/2 - 2, sy + tileSize / 2 - radius - 20, w + 4, 12);
-      ctx.fillStyle = '#fff';
-      ctx.fillText(txt, sx + tileSize / 2, sy + tileSize / 2 - radius - 14);
-    }
+    // ⚠️ Значок ⚔<цифра> убран
 
     if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
@@ -2863,7 +2821,6 @@ function startGame() {
   window.addEventListener('resize', initSituationCanvas);
   situationPoints = [];
 
-  // Разблокировка аудио на старте
   initAudio();
 
   lastTime = performance.now();
