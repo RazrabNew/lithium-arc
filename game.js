@@ -646,7 +646,6 @@ function generateRoads() {
   ROADS = [];
   const seen = new Set();
 
-  // Внутрифракционные дороги
   CITIES.forEach(city => {
     const sameFaction = CITIES.filter(c => c !== city && c.owner === city.owner);
     const neighbors = sameFaction
@@ -665,7 +664,6 @@ function generateRoads() {
     }
   });
 
-  // Пограничные дороги
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
   auroraCities.forEach(aCity => {
@@ -674,8 +672,8 @@ function generateRoads() {
       .sort((a, b) => a.dist - b.dist);
     let borderLinks = 0;
     for (const { city: vCity, dist } of enemyNeighbors) {
-      if (borderLinks >= 2) break;
-      if (dist > 12) break;
+      if (borderLinks >= 3) break;
+      if (dist > 15) break;
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
@@ -1107,14 +1105,24 @@ function openCityPanel(city) {
     buildBtn.onclick = () => openBuildModal(city);
   } else {
     attackBtn.style.display = 'flex';
-    const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && canAttack(c));
-    if (sources.length > 0) {
+
+    const canLand = c => c.owner === state.faction && canReachByRoad(c, city) && canAttack(c);
+    const canDrone = state.resources.drones >= STRIKE_COST.drones.count;
+    const canMissile = state.resources.weapons >= STRIKE_COST.missiles.ammo &&
+                       state.resources.fuel >= STRIKE_COST.missiles.fuel;
+
+    const anyLandSource = CITIES.some(canLand);
+    const anyDroneSource = canDrone && CITIES.some(c => c.owner === state.faction);
+    const anyMissileSource = canMissile && CITIES.some(c => c.owner === state.faction);
+
+    if (anyLandSource || anyDroneSource || anyMissileSource) {
       attackBtn.disabled = false;
-      attackBtn.onclick = () => openAttackSourcesPanel(city, sources);
+      attackBtn.onclick = () => openAttackSourcesPanel(city, null);
     } else {
       attackBtn.disabled = true;
       attackBtn.onclick = null;
     }
+
     hireBtn.style.display = 'none';
     fortifyBtn.style.display = 'none';
     buildBtn.style.display = 'none';
@@ -1143,13 +1151,39 @@ function openAttackSourcesPanel(targetCity, sources) {
   const list = document.getElementById('attack-sources-list');
   panel.classList.remove('hidden');
   list.innerHTML = '';
-  sources.forEach(source => {
+
+  let candidates;
+  if (sources) {
+    candidates = sources;
+  } else {
+    candidates = CITIES.filter(c => c.owner === state.faction && getGarrisonTotal(c.garrison) > 0);
+  }
+
+  if (candidates.length === 0) {
+    list.innerHTML = `<div class="target-info" style="padding:12px;">Нет доступных источников</div>`;
+    return;
+  }
+
+  candidates.forEach(source => {
+    const canLand = canReachByRoad(source, targetCity) && getGarrisonTotal(source.garrison) > 0;
+    const canDrone = canStrikeWithDrones(targetCity) && state.resources.drones >= STRIKE_COST.drones.count;
+    const canMissile = canStrikeWithMissiles(targetCity) &&
+                       state.resources.weapons >= STRIKE_COST.missiles.ammo &&
+                       state.resources.fuel >= STRIKE_COST.missiles.fuel;
+
+    const tags = [];
+    if (canLand) tags.push('⚔️');
+    if (canDrone) tags.push('🛸');
+    if (canMissile) tags.push('🚀');
+
+    if (tags.length === 0) return;
+
     const row = document.createElement('div');
     row.className = 'target-row';
     row.innerHTML = `
       <div>
-        <div class="target-name">${source.name}</div>
-        <div class="target-info">Сила: ${getCityPower(source).toFixed(1)}</div>
+        <div class="target-name">${source.name} ${tags.join(' ')}</div>
+        <div class="target-info">Сила: ${getCityPower(source).toFixed(1)} · Гарнизон: ${getGarrisonTotal(source.garrison)}</div>
       </div>
       <div class="target-info">→ ${targetCity.name}</div>
     `;
@@ -1160,22 +1194,36 @@ function openAttackSourcesPanel(targetCity, sources) {
     });
     list.appendChild(row);
   });
+
+  if (list.children.length === 0) {
+    list.innerHTML = `<div class="target-info" style="padding:12px;">Нет источника с нужными войсками/ресурсами</div>`;
+  }
 }
 function closeAttackSourcesPanel() { document.getElementById('attack-sources-panel').classList.add('hidden'); }
 document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
 // ============ ВЫБОР ТИПА АТАКИ ============
 function openAttackTypeChoice(fromCity, targetCity) {
-  const canLand = canReachByRoad(fromCity, targetCity);
-  const canDrone = canStrikeWithDrones(targetCity);
-  const canMissile = canStrikeWithMissiles(targetCity);
+  roadDistCache = null;
+  const distMap = getRoadDistances();
+  const distToTarget = distMap.get(targetCity);
+
+  const canLand = canReachByRoad(fromCity, targetCity) && getGarrisonTotal(fromCity.garrison) > 0;
+  const canDrone = distToTarget !== undefined && distToTarget >= 2 && state.resources.drones >= STRIKE_COST.drones.count;
+  const canMissile = distToTarget !== undefined && distToTarget >= 3 &&
+                     state.resources.weapons >= STRIKE_COST.missiles.ammo &&
+                     state.resources.fuel >= STRIKE_COST.missiles.fuel;
 
   const options = [];
   if (canLand) options.push('land');
   if (canDrone) options.push('drones');
   if (canMissile) options.push('missiles');
 
-  if (options.length === 0) return;
+  if (options.length === 0) {
+    setEventMessage('Нет доступных типов атаки для этого города', 'warning');
+    return;
+  }
+
   if (options.length === 1) {
     if (options[0] === 'land') openSendCompositionModal(fromCity, targetCity, 'land');
     else openStrikeCompositionModal(fromCity, targetCity, options[0]);
@@ -1207,10 +1255,8 @@ function openAttackTypeChoice(fromCity, targetCity) {
 
   if (canDrone) {
     const count = Math.floor(state.resources.drones);
-    const canUse = count >= STRIKE_COST.drones.count;
     const row = document.createElement('div');
     row.className = 'target-row';
-    row.style.opacity = canUse ? '1' : '0.5';
     row.innerHTML = `
       <div>
         <div class="target-name">🛸 Удар дронами</div>
@@ -1220,9 +1266,7 @@ function openAttackTypeChoice(fromCity, targetCity) {
         </div>
       </div>
     `;
-    if (canUse) {
-      row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'drones'));
-    }
+    row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'drones'));
     body.appendChild(row);
   }
 
@@ -1230,10 +1274,8 @@ function openAttackTypeChoice(fromCity, targetCity) {
     const weapons = Math.floor(state.resources.weapons);
     const fuel = Math.floor(state.resources.fuel);
     const c = STRIKE_COST.missiles;
-    const canUse = weapons >= c.ammo && fuel >= c.fuel;
     const row = document.createElement('div');
     row.className = 'target-row';
-    row.style.opacity = canUse ? '1' : '0.5';
     row.innerHTML = `
       <div>
         <div class="target-name">🚀 Ракетный удар</div>
@@ -1243,9 +1285,7 @@ function openAttackTypeChoice(fromCity, targetCity) {
         </div>
       </div>
     `;
-    if (canUse) {
-      row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'missiles'));
-    }
+    row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'missiles'));
     body.appendChild(row);
   }
 
@@ -1364,7 +1404,6 @@ function openStrikeCompositionModal(fromCity, toCity, strikeType) {
 
   render();
 
-  // Клонируем кнопку, чтобы снять старые обработчики
   const fresh = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(fresh, confirmBtn);
 
@@ -1414,57 +1453,11 @@ function openStrikeCompositionModal(fromCity, toCity, strikeType) {
 let sendFromCity = null, sendToCity = null, sendComposition = null;
 
 function openSendModal(fromCity, forcedTarget = null) {
-  const landTargets = CITIES.filter(c =>
-    c.owner !== state.faction && canReachByRoad(fromCity, c)
-  );
-  const droneTargets = CITIES.filter(c => canStrikeWithDrones(c));
-  const missileTargets = CITIES.filter(c => canStrikeWithMissiles(c));
-
   if (forcedTarget) {
     openAttackTypeChoice(fromCity, forcedTarget);
     return;
   }
-
-  const allTargets = new Set([...landTargets, ...droneTargets, ...missileTargets]);
-  if (allTargets.size === 0) return;
-
-  const dict = LANG[state.settings.language];
-  const list = document.getElementById('attack-targets');
-  const panel = document.getElementById('attack-target-panel');
-  panel.classList.remove('hidden');
-  list.innerHTML = '';
-
-  const dist = getRoadDistances();
-
-  Array.from(allTargets).forEach(target => {
-    const d = dist.get(target);
-    const canLand = landTargets.includes(target);
-    const canDrone = droneTargets.includes(target);
-    const canMissile = missileTargets.includes(target);
-
-    const tags = [];
-    if (canLand) tags.push('⚔️');
-    if (canDrone) tags.push('🛸');
-    if (canMissile) tags.push('🚀');
-
-    const row = document.createElement('div');
-    row.className = 'target-row';
-    row.innerHTML = `
-      <div>
-        <div class="target-name">${target.name} ${tags.join(' ')}</div>
-        <div class="target-info">
-          ${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper}
-          · Линия ${d ?? '?'}
-          · Сила: ${getCityPower(target).toFixed(1)}
-        </div>
-      </div>
-    `;
-    row.addEventListener('click', () => {
-      closeAttackTargetPanel();
-      openAttackTypeChoice(fromCity, target);
-    });
-    list.appendChild(row);
-  });
+  openAttackSourcesPanel(null, null);
 }
 
 // ============ ПЕРЕБРОСКА ============
@@ -2201,12 +2194,13 @@ function getAARadius(aaCount) {
   return Math.min(AA_MAX_RADIUS, AA_RADIUS + (aaCount - 1) * 0.5);
 }
 
-function getAACoverage(worldX, worldY, defenderOwner) {
+function getAACoverage(worldX, worldY, defenderOwner, attackerOwner) {
   let totalAA = 0;
   let techLevel = 0;
 
   CITIES.forEach(city => {
     if (city.owner !== defenderOwner) return;
+    if (attackerOwner && city.owner === attackerOwner) return;
 
     const aaCount = city.garrison?.aa || 0;
     if (aaCount === 0) return;
@@ -2252,7 +2246,10 @@ function applyAACheck(atk, dt, index) {
   const defenderOwner = atk.to.owner;
   if (defenderOwner === 'neutral') return false;
 
-  const coverage = getAACoverage(worldX, worldY, defenderOwner);
+  // Не сбиваем свои же ракеты
+  if (atk.from.owner === defenderOwner) return false;
+
+  const coverage = getAACoverage(worldX, worldY, defenderOwner, atk.from.owner);
   if (!coverage) return false;
 
   const unitTypeMult = AA_UNIT_MULT[atk.strikeUnit] || 1.0;
@@ -2268,7 +2265,6 @@ function applyAACheck(atk, dt, index) {
 
   atk.composition[atk.strikeUnit] -= shotDown;
 
-  // Определяем над чьим городом сбили
   let overCity = null, minDist = Infinity;
   CITIES.forEach(c => {
     if (c.owner !== defenderOwner) return;
@@ -2282,7 +2278,6 @@ function applyAACheck(atk, dt, index) {
   const unitNamePlural = atk.strikeUnit === 'drones' ? 'дронов' : 'ракет';
   const isFull = atk.composition[atk.strikeUnit] <= 0;
 
-  // Лог
   state.interceptLog.push({
     time: state.globalTime,
     owner: defenderOwner,
@@ -2293,7 +2288,6 @@ function applyAACheck(atk, dt, index) {
   });
   if (state.interceptLog.length > 20) state.interceptLog.shift();
 
-  // Визуальный эффект
   state.captureEffects.push({
     x: worldX / MAP.TILE,
     y: worldY / MAP.TILE,
@@ -2302,7 +2296,6 @@ function applyAACheck(atk, dt, index) {
     color: '#00d4ff',
   });
 
-  // Уведомления
   if (defenderOwner === state.faction) {
     if (isFull) {
       setEventMessage(`🛡️ Перехват: ${shotDown} ${unitNamePlural} над ${overCity ? overCity.name : 'территорией'}`, 'success');
@@ -2481,7 +2474,6 @@ function resolveBattle(fromCity, toCity, composition) {
   const defenseMult = getDefenseMultiplier(toCity);
 
   const attackPower = ATTACK_UNITS.reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
-  // В обороне участвуют только наземные юниты
   const defensePower = GROUND_DEFENDERS.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
   const victory = attackPower > defensePower;
   const survivors = { ...attackerGarrison };
@@ -2498,7 +2490,6 @@ function resolveBattle(fromCity, toCity, composition) {
     const wasEnemy = toCity.owner !== state.faction;
     toCity.owner = fromCity.owner;
 
-    // После захвата ПВО/ракеты/дроны уничтожаются
     survivors.aa = 0;
     survivors.missiles = 0;
     survivors.drones = 0;
@@ -2583,22 +2574,22 @@ const AI = {
 
 const AI_PERSONALITIES = {
   aggressive: {
-    attackCooldown: 25, minAttackPower: 8,
+    attackCooldown: 25, minAttackPower: 5,
     buildPriority: 0.5, hirePriority: 0.8, techPriority: 0.4,
     targetNeutralBias: 0.7, targetPlayerBias: 0.9,
   },
   economic: {
-    attackCooldown: 45, minAttackPower: 15,
+    attackCooldown: 45, minAttackPower: 8,
     buildPriority: 0.9, hirePriority: 0.5, techPriority: 0.9,
     targetNeutralBias: 0.9, targetPlayerBias: 0.6,
   },
   balanced: {
-    attackCooldown: 35, minAttackPower: 12,
+    attackCooldown: 35, minAttackPower: 6,
     buildPriority: 0.7, hirePriority: 0.7, techPriority: 0.6,
     targetNeutralBias: 0.85, targetPlayerBias: 0.75,
   },
   defensive: {
-    attackCooldown: 60, minAttackPower: 20,
+    attackCooldown: 60, minAttackPower: 10,
     buildPriority: 0.8, hirePriority: 0.6, techPriority: 0.7,
     targetNeutralBias: 0.5, targetPlayerBias: 0.4,
   },
@@ -2641,36 +2632,48 @@ function initAI() {
 
 function calcAIMoneyIncome() {
   let cityIncome = 0;
+  let cityCount = 0;
   CITIES.forEach(c => {
     if (c.owner !== AI.faction) return;
+    cityCount++;
     const mine = (c.buildings?.mine || 0) * 4;
     const factory = (c.buildings?.factory || 0) * 2.5;
     cityIncome += c.baseIncome * (c.infrastructure / 100) + mine + factory;
   });
+
+  cityIncome += cityCount * 0.5;
+
   const settings = AI_DIFFICULTY_SETTINGS[state.difficulty] || AI_DIFFICULTY_SETTINGS.normal;
   const techMult = 1 + state.aiTech.economy * 0.20;
-  return cityIncome * 0.7 * settings.incomeMult * techMult;
+  return cityIncome * settings.incomeMult * techMult;
 }
 
 function calcAIResourceProduction() {
   let ammo = 0, weapons = 0, tanks = 0, fuel = 0;
+  let cityCount = 0;
   CITIES.forEach(c => {
     if (c.owner !== AI.faction) return;
+    cityCount++;
     ammo    += (c.buildings?.ammoFactory || 0) * 1.2;
     weapons += (c.buildings?.weaponFactory || 0) * 0.6;
     tanks   += (c.buildings?.tankFactory || 0) * 0.15;
     fuel    += (c.buildings?.oilWell || 0) * 1.0;
   });
+
+  ammo    += cityCount * 0.15;
+  weapons += cityCount * 0.08;
+  fuel    += cityCount * 0.10;
+
   return { ammo, weapons, tanks, fuel };
 }
 
 function updateAIEconomy(dt) {
   state.aiMoney += calcAIMoneyIncome() * dt;
   const prod = calcAIResourceProduction();
-  state.aiResources.ammo    = Math.min(RESOURCE_MAX.ammo, Math.max(0, state.aiResources.ammo + (prod.ammo - 0.3) * dt));
+  state.aiResources.ammo    = Math.min(RESOURCE_MAX.ammo, state.aiResources.ammo + prod.ammo * dt);
   state.aiResources.weapons = Math.min(RESOURCE_MAX.weapons, state.aiResources.weapons + prod.weapons * dt);
   state.aiResources.tanks   = Math.min(RESOURCE_MAX.tanks, state.aiResources.tanks + prod.tanks * dt);
-  state.aiResources.fuel    = Math.min(RESOURCE_MAX.fuel, Math.max(0, state.aiResources.fuel + (prod.fuel - 0.2) * dt));
+  state.aiResources.fuel    = Math.min(RESOURCE_MAX.fuel, state.aiResources.fuel + prod.fuel * dt);
   if (!state.aiResources.drones) state.aiResources.drones = 0;
 
   let droneProd = 0;
@@ -2762,7 +2765,7 @@ function aiAdapt() {
 function aiApplyStyleCounter(style) {
   const p = AI_PERSONALITIES[AI.personality];
   if (style === 'aggressive') {
-    p.minAttackPower = Math.max(p.minAttackPower, 15);
+    p.minAttackPower = Math.max(p.minAttackPower, 8);
     p.buildPriority = Math.min(1, p.buildPriority + 0.2);
     AI.memory.aggressionMod = Math.min(1.2, AI.memory.aggressionMod);
   } else if (style === 'economic') {
@@ -2802,13 +2805,19 @@ function findThreatenedAICity() {
   const incoming = ACTIVE_ATTACKS.filter(atk =>
     atk.to.owner === AI.faction &&
     atk.from.owner === state.faction &&
-    atk.type !== 'transfer' &&
+    atk.type === 'attack' &&
     (!atk.phase || atk.phase === 'moving')
   );
   if (incoming.length === 0) return null;
 
+  const realThreats = incoming.filter(atk => {
+    const power = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
+    return power >= 3;
+  });
+  if (realThreats.length === 0) return null;
+
   let worst = null, worstScore = 0;
-  incoming.forEach(atk => {
+  realThreats.forEach(atk => {
     const power = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
     const cityValue = calcCityStrategicValue(atk.to);
     const score = power * cityValue;
@@ -2944,7 +2953,7 @@ function aiLaunchPunishment() {
   updateMarchLoops();
 }
 
-// ---------- Строительство ----------
+// ---------- Строительство (сбалансированное) ----------
 function aiTryBuild() {
   const cities = getAICities().filter(c => {
     const total = Object.values(c.buildings || {}).reduce((a, b) => a + b, 0);
@@ -2952,10 +2961,32 @@ function aiTryBuild() {
   });
   if (cities.length === 0) return;
 
-  let priorities = ['ammoFactory', 'weaponFactory', 'oilWell', 'mine', 'factory', 'tankFactory'];
+  const totals = { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0, droneFactory: 0 };
+  let cityCount = 0;
+  CITIES.forEach(c => {
+    if (c.owner !== AI.faction) return;
+    cityCount++;
+    Object.keys(totals).forEach(k => totals[k] += (c.buildings?.[k] || 0));
+  });
 
-  if (state.aiTech.drones > 0 || state.aiTech.dronefactory > 0) {
-    priorities.unshift('droneFactory');
+  const target = {
+    ammoFactory: cityCount * 0.3,
+    weaponFactory: cityCount * 0.3,
+    oilWell: cityCount * 0.25,
+    mine: cityCount * 0.4,
+    factory: cityCount * 0.3,
+    tankFactory: cityCount * 0.15,
+    droneFactory: cityCount * 0.1,
+  };
+
+  const priorities = Object.keys(totals)
+    .map(k => ({ key: k, deficit: target[k] - totals[k] }))
+    .filter(o => o.deficit > 0)
+    .sort((a, b) => b.deficit - a.deficit)
+    .map(o => o.key);
+
+  if (priorities.length === 0) {
+    priorities.push('ammoFactory', 'weaponFactory', 'oilWell', 'mine', 'factory');
   }
 
   const sorted = cities.sort((a, b) => {
@@ -2963,12 +2994,11 @@ function aiTryBuild() {
     const totalB = Object.values(b.buildings || {}).reduce((s, v) => s + v, 0);
     return totalA - totalB;
   });
-
   const city = sorted[0];
 
   for (const key of priorities) {
     const cost = aiBuildCost(city, key);
-    if (state.aiMoney >= cost) {
+    if (state.aiMoney >= cost + 100) {
       state.aiMoney -= cost;
       city.buildings[key] = (city.buildings[key] || 0) + 1;
       AI.memory.lastBuildTime = state.globalTime;
@@ -3062,38 +3092,52 @@ function aiTryHire() {
   const cities = getAICities();
   if (cities.length === 0) return;
 
-  const safe = cities.filter(c => getCityThreat(c) === 0);
-  const pool = safe.length > 0 ? safe : cities;
-  const target = pool[Math.floor(Math.random() * pool.length)];
+  // Прифронтовые города — туда стягиваем армию
+  const playerCities = CITIES.filter(c => c.owner === state.faction);
+  const sorted = cities.map(c => {
+    let minDist = Infinity;
+    playerCities.forEach(pc => {
+      const d = Math.hypot(pc.x - c.x, pc.y - c.y);
+      if (d < minDist) minDist = d;
+    });
+    return { city: c, dist: minDist, threat: getCityThreat(c) };
+  }).sort((a, b) => {
+    if (a.threat !== b.threat) return b.threat - a.threat;
+    return a.dist - b.dist;
+  });
+
+  const target = sorted[0].city;
 
   const style = AI.memory.playerStyle;
   let hireOrder;
   if (style === 'aggressive') hireOrder = ['tanks', 'infantry'];
-  else if (style === 'economic') hireOrder = ['infantry', 'drones'];
+  else if (style === 'economic') hireOrder = ['infantry', 'tanks'];
   else hireOrder = ['infantry', 'tanks'];
 
   for (const type of hireOrder) {
     const cost = UNIT_TYPES[type].cost;
-    const count = type === 'infantry' ? 5 : 1;
-    const totalMoney = (cost.money || 0) * count;
-    const totalWeapons = (cost.weapons || 0) * count;
-    const totalTanks = (cost.tanks || 0) * count;
-    const totalFuel = (cost.fuel || 0) * count;
-    const totalDrones = (cost.drones || 0) * count;
+    const tries = type === 'infantry' ? [5, 3, 1] : [1];
+    for (const count of tries) {
+      const totalMoney = (cost.money || 0) * count;
+      const totalWeapons = (cost.weapons || 0) * count;
+      const totalTanks = (cost.tanks || 0) * count;
+      const totalFuel = (cost.fuel || 0) * count;
+      const totalDrones = (cost.drones || 0) * count;
 
-    if (state.aiMoney >= totalMoney &&
-        state.aiResources.weapons >= totalWeapons &&
-        state.aiResources.tanks >= totalTanks &&
-        state.aiResources.fuel >= totalFuel &&
-        state.aiResources.drones >= totalDrones) {
-      state.aiMoney -= totalMoney;
-      state.aiResources.weapons -= totalWeapons;
-      state.aiResources.tanks -= totalTanks;
-      state.aiResources.fuel -= totalFuel;
-      state.aiResources.drones -= totalDrones;
-      target.garrison[type] = (target.garrison[type] || 0) + count;
-      AI.memory.lastHireTime = state.globalTime;
-      return;
+      if (state.aiMoney >= totalMoney &&
+          state.aiResources.weapons >= totalWeapons &&
+          state.aiResources.tanks >= totalTanks &&
+          state.aiResources.fuel >= totalFuel &&
+          state.aiResources.drones >= totalDrones) {
+        state.aiMoney -= totalMoney;
+        state.aiResources.weapons -= totalWeapons;
+        state.aiResources.tanks -= totalTanks;
+        state.aiResources.fuel -= totalFuel;
+        state.aiResources.drones -= totalDrones;
+        target.garrison[type] = (target.garrison[type] || 0) + count;
+        AI.memory.lastHireTime = state.globalTime;
+        return;
+      }
     }
   }
 }
@@ -3101,24 +3145,25 @@ function aiTryHire() {
 // ---------- Технологии ----------
 function aiTryResearch() {
   const order = [];
-  const playerHasAir = state.resources.drones > 0 || state.resources.weapons >= 15;
+  order.push('economy');
 
+  const playerHasAir = state.resources.drones > 0 || state.resources.weapons >= 15;
   if (playerHasAir) order.push('aa');
-  order.push('combat', 'armor', 'economy');
+
+  order.push('combat', 'armor', 'logistics');
 
   if (AI.personality === 'aggressive' && state.aiTech.drones < 3) {
     order.push('drones', 'dronefactory');
   }
 
-  order.push('logistics', 'mobilization');
+  order.push('mobilization');
 
   for (const key of order) {
     if (state.aiTech[key] === undefined) continue;
     if (state.aiTech[key] >= 6) continue;
 
     const cost = Math.round(TECH_CFG[key] * Math.pow(1.35, state.aiTech[key]));
-    const reserve = 100;
-    if (state.aiMoney >= cost + reserve) {
+    if (state.aiMoney >= cost + 200) {
       state.aiMoney -= cost;
       state.aiTech[key]++;
       AI.memory.lastTechTime = state.globalTime;
@@ -3137,7 +3182,6 @@ function aiTryStrike() {
   const aiCities = getAICities();
   if (aiCities.length === 0) return;
 
-  // Линии от городов ИИ
   const dist = new Map();
   const queue = [];
   aiCities.forEach(c => { dist.set(c, 0); queue.push(c); });
@@ -3229,9 +3273,12 @@ function aiTryAttack(p) {
   const aiCities = getAICities();
   if (aiCities.length === 0) return;
 
+  const timeFactor = Math.min(1, state.globalTime / 300);
+  const effectiveMinPower = p.minAttackPower * (1 - timeFactor * 0.4);
+
   const sources = aiCities
     .map(c => ({ city: c, power: getCityPower(c), garrison: getGarrisonTotal(c.garrison) }))
-    .filter(o => o.power >= p.minAttackPower)
+    .filter(o => o.power >= effectiveMinPower)
     .sort((a, b) => b.power - a.power);
 
   if (sources.length === 0) return;
@@ -3264,13 +3311,14 @@ function aiTryAttack(p) {
       });
 
       const totalUnits = ATTACK_UNITS.reduce((s, k) => s + (composition[k] || 0), 0);
-      if (totalUnits < 2) continue;
+      if (totalUnits < 1) continue;
 
       let remaining = 0;
       ATTACK_UNITS.forEach(k => {
         remaining += (source.city.garrison[k] || 0) - (composition[k] || 0);
       });
-      if (remaining < 1) continue;
+      const isCapital = source.city.type === 'capital';
+      if (remaining < 1 && !isCapital) continue;
 
       const cost = calcAttackCost(composition);
       if (!aiCanAfford(state.aiResources, cost)) continue;
@@ -3310,25 +3358,30 @@ function aiThink() {
   aiAdapt();
 
   const threatenedCity = findThreatenedAICity();
-  if (threatenedCity) aiReinforceCity(threatenedCity, p);
+  if (threatenedCity) {
+    aiReinforceCity(threatenedCity, p);
+  }
 
   if (AI_OPS.punishment.active) {
     const elapsed = state.globalTime - AI_OPS.punishment.startTime;
-    if (elapsed >= AI_OPS.punishment.duration) aiLaunchPunishment();
-    else { aiAccumulateForPunishment(); return; }
-  }
-
-  const playerStrategics = findPlayerStrategicCities();
-  if (playerStrategics.length > 0 && !AI_OPS.punishment.active &&
-      state.globalTime - (AI.memory.lastPunishmentTime || -999) > 180) {
-    const target = playerStrategics[0];
-    const targetDefense = getCityPower(target) * getDefenseMultiplier(target);
-    AI_OPS.punishment = {
-      active: true, target,
-      startTime: state.globalTime, duration: 90,
-      requiredPower: targetDefense * 1.6,
-    };
-    setEventMessage(`⚠️ Разведка: враг готовит удар по ${target.name}`, 'warning');
+    if (elapsed >= AI_OPS.punishment.duration) {
+      aiLaunchPunishment();
+    } else {
+      aiAccumulateForPunishment();
+    }
+  } else {
+    const playerStrategics = findPlayerStrategicCities();
+    if (playerStrategics.length > 0 &&
+        state.globalTime - (AI.memory.lastPunishmentTime || -999) > 180) {
+      const target = playerStrategics[0];
+      const targetDefense = getCityPower(target) * getDefenseMultiplier(target);
+      AI_OPS.punishment = {
+        active: true, target,
+        startTime: state.globalTime, duration: 90,
+        requiredPower: targetDefense * 1.6,
+      };
+      setEventMessage(`⚠️ Разведка: враг готовит удар по ${target.name}`, 'warning');
+    }
   }
 
   if (Math.random() < p.buildPriority) aiTryBuild();
@@ -3340,7 +3393,9 @@ function aiThink() {
 
   const timeSinceAttack = state.globalTime - AI.memory.lastAttackTime;
   const adjustedCooldown = p.attackCooldown / AI.memory.aggressionMod;
-  if (timeSinceAttack > adjustedCooldown) aiTryAttack(p);
+  if (timeSinceAttack > adjustedCooldown) {
+    aiTryAttack(p);
+  }
 }
 
 function updateAI(dt) {
@@ -3715,7 +3770,6 @@ function updateHUD() {
   sitStatus.textContent = displayText || '—';
   sitLabel.className = 'situation-label status-' + displayColor;
 
-  // Баннер ракетной опасности
   const mw = document.getElementById('missile-warning');
   if (mw) {
     const active = state.missileAlerts[0];
