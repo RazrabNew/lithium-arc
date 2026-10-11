@@ -35,7 +35,7 @@ body {
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .hidden { display: none !important; }
 
-/* ===== SVG ИКОНКИ (БЕЗ ПОКРАСКИ) ===== */
+/* ===== SVG ИКОНКИ ===== */
 .svg-icon {
   width: 18px;
   height: 18px;
@@ -53,20 +53,7 @@ body {
   object-fit: contain;
 }
 
-.svg-icon-large {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-/* Классы цветов оставлены пустыми — фильтры отключены */
-.icon-cyan,
-.icon-red,
-.icon-gold,
-.icon-blue,
-.icon-green,
-.icon-white {
+.icon-cyan, .icon-red, .icon-gold, .icon-blue, .icon-green, .icon-white {
   filter: none;
 }
 
@@ -159,7 +146,7 @@ body {
 
 #start-btn:disabled { background: #1a2333; color: var(--text-muted); box-shadow: none; cursor: not-allowed; }
 
-/* HUD */
+/* ===== HUD ===== */
 #hud { background: var(--bg-panel); border-bottom: 1px solid var(--border-dim); flex-shrink: 0; }
 .hud-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; overflow-x: auto; }
 .resources { justify-content: space-between; border-bottom: 1px solid var(--border-dim); }
@@ -187,18 +174,120 @@ body {
 #income.positive { color: var(--green); }
 #income.negative { color: var(--red); }
 
-.weather-stat { font-size: 12px; }
-.status-stat { border-width: 1.5px; }
-.status-stat.status-green { border-color: #4ade80; }
-.status-stat.status-yellow { border-color: #facc15; }
-.status-stat.status-red { border-color: var(--red); animation: pulse-red 1.5s infinite; }
-.status-stat.status-critical { border-color: var(--red); animation: pulse-red 0.6s infinite; }
-
-@keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 8px rgba(255, 59, 92, 0.6); }
-  50% { box-shadow: 0 0 20px rgba(255, 59, 92, 1); }
+/* Строка ресурсов с прогресс-барами */
+.resources-2 {
+  border-bottom: 1px solid var(--border-dim);
+  gap: 4px;
+  padding: 4px 6px;
+  overflow-x: auto;
 }
 
+.res-stat {
+  flex: 1;
+  min-width: 62px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  flex-shrink: 1;
+}
+
+.res-stat .svg-icon { width: 14px; height: 14px; }
+.res-stat .value {
+  font-size: 11px;
+  color: #fff;
+  font-weight: bold;
+  min-width: 22px;
+  text-align: right;
+}
+
+.res-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: #1a2333;
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 18px;
+}
+
+.res-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00d4ff 0%, #00ff88 100%);
+  transition: width 0.3s;
+}
+
+/* Погода — расширенный блок */
+.weather-stat { font-size: 12px; }
+
+.weather-stat-wide {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.weather-stat-wide .sub { font-size: 9px; }
+
+/* ===== СТАТУС-ЛИНИЯ ОБСТАНОВКИ ===== */
+.situation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border-dim);
+  min-height: 30px;
+}
+
+.situation-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 90px;
+  transition: color 0.3s;
+}
+
+.situation-label.status-green { color: #4ade80; }
+.situation-label.status-yellow { color: #facc15; }
+.situation-label.status-red { color: var(--red); animation: ticker-pulse 1.2s infinite; }
+.situation-label.status-critical { color: var(--red); animation: ticker-pulse 0.5s infinite; }
+
+.situation-canvas {
+  flex: 1;
+  height: 22px;
+  display: block;
+  background: rgba(10, 20, 30, 0.6);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+}
+
+/* Строка событий */
+.event-row {
+  border-bottom: 1px solid var(--border-dim);
+  padding: 4px 10px;
+  min-height: 22px;
+}
+
+.event-ticker {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  transition: color 0.3s;
+}
+
+.event-ticker.warning { color: #facc15; }
+.event-ticker.danger { color: var(--red); animation: ticker-pulse 1.2s infinite; }
+.event-ticker.success { color: var(--green); }
+
+@keyframes ticker-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Кнопки скорости / зум / действия */
 .speed-group { display: flex; gap: 4px; }
 
 .speed-btn, #pause-btn, .city-btn, .zoom-btn {
@@ -697,155 +786,4 @@ body {
   color: #0a0e1a; border: none; border-radius: 8px;
   font-size: 14px; font-weight: bold; cursor: pointer;
   font-family: inherit;
-}
-/* ===== НОВЫЕ ЭЛЕМЕНТЫ HUD ===== */
-
-/* Строка ресурсов с прогресс-барами */
-.resources-2 {
-  border-bottom: 1px solid var(--border-dim);
-  gap: 4px;
-  padding: 4px 6px;
-  overflow-x: auto;
-}
-
-.res-stat {
-  flex: 1;
-  min-width: 60px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  font-size: 11px;
-  flex-shrink: 1;
-}
-
-.res-stat .svg-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.res-stat .value {
-  font-size: 11px;
-  color: #fff;
-  font-weight: bold;
-  min-width: 24px;
-  text-align: right;
-}
-
-.res-bar-wrap {
-  flex: 1;
-  height: 4px;
-  background: #1a2333;
-  border-radius: 2px;
-  overflow: hidden;
-  min-width: 20px;
-}
-
-.res-bar-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #00d4ff 0%, #00ff88 100%);
-  transition: width 0.3s;
-}
-
-/* Строка событий / предупреждений */
-.event-row {
-  border-bottom: 1px solid var(--border-dim);
-  padding: 4px 10px;
-  min-height: 22px;
-}
-
-.event-ticker {
-  font-size: 11px;
-  color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-  transition: color 0.3s;
-}
-
-.event-ticker.warning {
-  color: #facc15;
-}
-
-.event-ticker.danger {
-  color: var(--red);
-  animation: ticker-pulse 1.2s infinite;
-}
-
-.event-ticker.success {
-  color: var(--green);
-}
-
-@keyframes ticker-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-/* Пульсирующий индикатор обстановки — улучшенный */
-.status-stat {
-  position: relative;
-  overflow: hidden;
-  border-width: 1.5px;
-}
-
-.status-stat::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.status-stat.status-green {
-  border-color: #4ade80;
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
-}
-
-.status-stat.status-yellow {
-  border-color: #facc15;
-  box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
-  animation: status-pulse-yellow 2s infinite;
-}
-
-.status-stat.status-red {
-  border-color: var(--red);
-  box-shadow: 0 0 14px rgba(255, 59, 92, 0.7);
-  animation: status-pulse-red 1.2s infinite;
-}
-
-.status-stat.status-critical {
-  border-color: var(--red);
-  background: rgba(255, 59, 92, 0.15);
-  box-shadow: 0 0 20px rgba(255, 59, 92, 1);
-  animation: status-pulse-critical 0.5s infinite;
-}
-
-@keyframes status-pulse-yellow {
-  0%, 100% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
-  50% { box-shadow: 0 0 16px rgba(250, 204, 21, 0.7); }
-}
-
-@keyframes status-pulse-red {
-  0%, 100% { box-shadow: 0 0 14px rgba(255, 59, 92, 0.7); }
-  50% { box-shadow: 0 0 24px rgba(255, 59, 92, 1); }
-}
-
-@keyframes status-pulse-critical {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 59, 92, 1);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 59, 92, 1);
-    transform: scale(1.03);
-  }
-}
-
-/* Игровая дата */
-#game-date {
-  font-size: 9px;
-  color: var(--text-dim);
 }

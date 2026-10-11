@@ -116,15 +116,20 @@
             <span class="sub" id="game-date">День 1, 00:00</span>
           </div>
         </div>
-        <div class="stat weather-stat">
+        <div class="stat weather-stat weather-stat-wide">
           <img class="svg-icon" id="weather-icon" src="icons/sun.svg" alt="">
-          <span class="value" id="weather-name">Ясно</span>
-          <span class="sub" id="weather-effect">×1.0</span>
+          <div class="stat-body">
+            <span class="value" id="weather-name">Ясно</span>
+            <span class="sub" id="weather-effect">скорость ×1.0</span>
+          </div>
         </div>
-        <div class="stat status-stat" id="status-stat">
-          <span class="icon" id="status-icon">🟢</span>
-          <span class="value" id="status-name">Затишье</span>
+      </div>
+
+      <div class="hud-row situation-row">
+        <div class="situation-label" id="situation-label">
+          <span id="situation-status">Затишье</span>
         </div>
+        <canvas id="situation-canvas" class="situation-canvas"></canvas>
       </div>
 
       <div class="hud-row event-row">
@@ -136,7 +141,6 @@
           <button class="speed-btn" data-speed="0.5">×0.5</button>
           <button class="speed-btn active" data-speed="1">×1</button>
           <button class="speed-btn" data-speed="2">×2</button>
-          <button class="speed-btn" data-speed="4">×4</button>
         </div>
         <div class="speed-group">
           <button class="zoom-btn" id="zoom-out">−</button>
@@ -185,7 +189,6 @@
       </div>
     </div>
 
-    <!-- Панель выбора цели -->
     <div id="attack-target-panel" class="city-panel hidden">
       <div class="city-panel-header">
         <span data-i18n="chooseTarget">Выберите цель</span>
@@ -194,7 +197,6 @@
       <div class="city-panel-body" id="attack-targets"></div>
     </div>
 
-    <!-- Панель выбора источника -->
     <div id="attack-sources-panel" class="city-panel hidden">
       <div class="city-panel-header">
         <span data-i18n="chooseSource">Откуда атаковать?</span>

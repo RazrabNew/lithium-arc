@@ -502,7 +502,6 @@ function generateOverlayCanvas() {
   const delaunay = d3.Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, WORLD_W, WORLD_H]);
 
-  // Регионы — градиент
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
@@ -987,7 +986,7 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     from: sendFromCity, to: sendToCity,
     composition: { ...sendComposition },
     progress: 0,
-    speed: 0.3 * weather.speedMult * dayEff.speedMult,
+    speed: 0.1 * weather.speedMult * dayEff.speedMult,
   });
   state.lastAttackTime = state.globalTime;
   setEventMessage(`⚔️ Войска отправлены: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
@@ -1527,6 +1526,103 @@ function getSituation() {
   return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
 }
 
+// ============ ЭКГ-МОНИТОР ОБСТАНОВКИ ============
+let situationCtx = null;
+let situationPoints = [];
+let lastSituationDraw = 0;
+const SITUATION_POINTS = 120;
+
+function initSituationCanvas() {
+  const c = document.getElementById('situation-canvas');
+  if (!c) return;
+  const rect = c.getBoundingClientRect();
+  const dpr2 = window.devicePixelRatio || 1;
+  c.width = rect.width * dpr2;
+  c.height = rect.height * dpr2;
+  situationCtx = c.getContext('2d');
+  situationCtx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
+}
+
+function getTension() {
+  let tension = 0;
+  const sit = getSituation();
+  if (sit.color === 'green') tension = 0.05;
+  else if (sit.color === 'yellow') tension = 0.3;
+  else if (sit.color === 'red') tension = 0.6;
+  else if (sit.color === 'critical') tension = 0.95;
+
+  tension += Math.min(0.3, ACTIVE_ATTACKS.length * 0.1);
+  if (state.welfare < 30) tension += 0.15;
+  if (state.services.corruption > 60) tension += 0.1;
+
+  return Math.min(1, tension);
+}
+
+function getSituationY() {
+  const tension = getTension();
+  const baseY = 0.75;
+  const targetY = 0.75 - tension * 0.6;
+  const noise = (Math.random() - 0.5) * 0.08;
+  return Math.max(0.05, Math.min(0.95, targetY + noise));
+}
+
+function drawSituation() {
+  if (!situationCtx) return;
+  const c = document.getElementById('situation-canvas');
+  const w = c.getBoundingClientRect().width;
+  const h = c.getBoundingClientRect().height;
+
+  situationCtx.clearRect(0, 0, w, h);
+
+  situationPoints.push({ y: getSituationY() });
+  if (situationPoints.length > SITUATION_POINTS) situationPoints.shift();
+
+  if (situationPoints.length < 2) return;
+
+  const tension = getTension();
+  let color;
+  if (tension < 0.15) color = '#4ade80';
+  else if (tension < 0.45) color = '#facc15';
+  else if (tension < 0.75) color = '#ff9500';
+  else color = '#ff3b5c';
+
+  situationCtx.strokeStyle = color;
+  situationCtx.lineWidth = 1.8;
+  situationCtx.lineJoin = 'round';
+  situationCtx.shadowColor = color;
+  situationCtx.shadowBlur = 6;
+
+  situationCtx.beginPath();
+  situationPoints.forEach((p, i) => {
+    const x = (i / (SITUATION_POINTS - 1)) * w;
+    const y = p.y * h;
+    if (i === 0) situationCtx.moveTo(x, y);
+    else situationCtx.lineTo(x, y);
+  });
+  situationCtx.stroke();
+  situationCtx.shadowBlur = 0;
+
+  const last = situationPoints[situationPoints.length - 1];
+  if (last) {
+    const lx = ((situationPoints.length - 1) / (SITUATION_POINTS - 1)) * w;
+    const ly = last.y * h;
+    situationCtx.fillStyle = color;
+    situationCtx.beginPath();
+    situationCtx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+    situationCtx.fill();
+  }
+
+  situationCtx.strokeStyle = 'rgba(100, 150, 200, 0.08)';
+  situationCtx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const gy = (i / 4) * h;
+    situationCtx.beginPath();
+    situationCtx.moveTo(0, gy);
+    situationCtx.lineTo(w, gy);
+    situationCtx.stroke();
+  }
+}
+
 // ============ ИГРОВОЙ ЦИКЛ ============
 let lastTime = performance.now();
 function loop(now) {
@@ -1538,6 +1634,11 @@ function loop(now) {
 
   const actionsModal = document.getElementById('actions-modal');
   if (!actionsModal.classList.contains('hidden')) updateCurrentTab();
+
+  if (performance.now() - lastSituationDraw > 50) {
+    drawSituation();
+    lastSituationDraw = performance.now();
+  }
 
   if (state.gameOver && !state.gameOverShown) {
     state.gameOverShown = true;
@@ -1619,7 +1720,6 @@ function update(dt) {
 
   updateAttacks(dt);
 
-  // Авто-сообщения
   if (state.globalTime - state.lastEventTime > 15) {
     if (state.welfare < 30) {
       setEventMessage(`⚠️ Благосостояние критически низкое!`, 'danger');
@@ -1679,7 +1779,6 @@ function updateHUD() {
   corEl.classList.remove('cor-good', 'cor-mid', 'cor-bad');
   corEl.classList.add(state.services.corruption < 30 ? 'cor-good' : state.services.corruption < 60 ? 'cor-mid' : 'cor-bad');
 
-  // Ресурсы с прогресс-барами
   const r = state.resources;
   const rm = RESOURCE_MAX;
   document.getElementById('hud-ammo').textContent = Math.floor(r.ammo);
@@ -1693,7 +1792,6 @@ function updateHUD() {
   document.getElementById('hud-drones').textContent = Math.floor(r.drones);
   document.getElementById('res-drones-bar').style.width = (r.drones / rm.drones * 100) + '%';
 
-  // Игровая дата и время
   const dayOfGame = Math.floor(state.globalTime / DAY_CYCLE_DURATION) + 1;
   state.gameDay = dayOfGame;
   const phaseT = state.dayTime % 1;
@@ -1702,23 +1800,23 @@ function updateHUD() {
   document.getElementById('game-date').textContent =
     `День ${dayOfGame}, ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-  // Время суток
   const phase = getCurrentPhase();
   const lang = state.settings.language;
   document.getElementById('time-icon').src = 'icons/' + phase.icon;
   document.getElementById('time-name').textContent = lang === 'ru' ? phase.ru : phase.en;
 
-  // Погода
   const weather = WEATHER[state.weather];
   document.getElementById('weather-icon').src = 'icons/' + weather.icon;
   document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
-  document.getElementById('weather-effect').textContent = '×' + weather.speedMult.toFixed(1);
+  document.getElementById('weather-effect').textContent = 'скорость ×' + weather.speedMult.toFixed(1);
 
-  // Обстановка
   const sit = getSituation();
-  document.getElementById('status-icon').textContent = sit.icon;
-  document.getElementById('status-name').textContent = lang === 'ru' ? sit.ru : sit.en;
-  document.getElementById('status-stat').className = 'stat status-stat status-' + sit.color;
+  const sitLabel = document.getElementById('situation-label');
+  const sitStatus = document.getElementById('situation-status');
+  if (sitLabel && sitStatus) {
+    sitStatus.textContent = lang === 'ru' ? sit.ru : sit.en;
+    sitLabel.className = 'situation-label status-' + sit.color;
+  }
 }
 
 // ============ РЕНДЕР ============
@@ -1752,14 +1850,16 @@ function renderMap() {
   renderVignette(w, h);
 }
 
+// Усиленная сетка
 function renderGrid(w, h) {
-  if (camera.zoom < 0.6) return;
-  const step = MAP.TILE * 4;
-  const alpha = camera.zoom > 1 ? 0.10 : 0.05;
+  if (camera.zoom < 0.5) return;
 
-  ctx.strokeStyle = `rgba(120, 180, 220, ${alpha})`;
+  const step = MAP.TILE * 2;  // каждые 2 тайла
+  const alpha = camera.zoom > 1.2 ? 0.20 : camera.zoom > 0.8 ? 0.14 : 0.09;
+
+  ctx.strokeStyle = `rgba(140, 200, 240, ${alpha})`;
   ctx.lineWidth = 1;
-  ctx.setLineDash([2, 5]);
+  ctx.setLineDash([3, 4]);
 
   const startX = Math.floor(camera.x / step) * step;
   const endX = camera.x + w / camera.zoom;
@@ -1782,6 +1882,48 @@ function renderGrid(w, h) {
   }
 
   ctx.setLineDash([]);
+
+  // Крупная сетка — каждые 8 тайлов, сплошная
+  const bigStep = MAP.TILE * 8;
+  ctx.strokeStyle = `rgba(140, 200, 240, ${alpha * 1.8})`;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 6]);
+
+  const startBX = Math.floor(camera.x / bigStep) * bigStep;
+  for (let wx = startBX; wx <= endX; wx += bigStep) {
+    const sx = (wx - camera.x) * camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx, h);
+    ctx.stroke();
+  }
+  const startBY = Math.floor(camera.y / bigStep) * bigStep;
+  for (let wy = startBY; wy <= endY; wy += bigStep) {
+    const sy = (wy - camera.y) * camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(0, sy);
+    ctx.lineTo(w, sy);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Подписи координат
+  if (camera.zoom > 0.9) {
+    ctx.font = `bold ${Math.max(9, 10 * camera.zoom)}px -apple-system, sans-serif`;
+    ctx.fillStyle = `rgba(140, 200, 240, ${alpha * 3})`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    for (let wx = startBX; wx <= endX; wx += bigStep) {
+      const sx = (wx - camera.x) * camera.zoom;
+      ctx.fillText('X' + Math.floor(wx / MAP.TILE), sx + 3, 3);
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    for (let wy = startBY; wy <= endY; wy += bigStep) {
+      const sy = (wy - camera.y) * camera.zoom;
+      ctx.fillText('Y' + Math.floor(wy / MAP.TILE), 3, sy + 3);
+    }
+  }
 }
 
 function renderWeather() {
@@ -2026,6 +2168,9 @@ function startGame() {
   initCanvas();
   initCameraControls();
   centerOnPlayerBase();
+  initSituationCanvas();
+  window.addEventListener('resize', initSituationCanvas);
+  situationPoints = [];
 
   setEventMessage('Добро пожаловать в Литийную Дугу', 'info');
 
