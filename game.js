@@ -2,6 +2,127 @@
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
+// ============ AUDIO ============
+let audioCtx = null;
+let audioInitialized = false;
+
+function initAudio() {
+  if (audioInitialized) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioInitialized = true;
+  } catch (e) {
+    console.warn('AudioContext не поддерживается', e);
+  }
+}
+document.addEventListener('touchstart', initAudio, { once: true });
+document.addEventListener('mousedown', initAudio, { once: true });
+
+function playShot(targetGain, intensity) {
+  if (!audioCtx || audioCtx.state === 'closed') return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(400 + Math.random() * 200, now);
+  osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+
+  gain.gain.setValueAtTime(0.3 * intensity, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+  osc.connect(gain);
+  gain.connect(targetGain);
+
+  osc.start(now);
+  osc.stop(now + 0.1);
+}
+
+function playExplosion(targetGain, intensity) {
+  if (!audioCtx || audioCtx.state === 'closed') return;
+  const now = audioCtx.currentTime;
+  const noise = audioCtx.createBufferSource();
+  const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+  }
+
+  noise.buffer = buffer;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 200;
+
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.4 * intensity;
+
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(targetGain);
+
+  noise.start(now);
+}
+
+// Звук подхода (отстрел по колонне)
+let approachSoundNodes = null;
+
+function startApproachSound(intensity = 0.6) {
+  if (!audioCtx) return;
+  stopApproachSound();
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.08 * intensity;
+  masterGain.connect(audioCtx.destination);
+
+  const interval = setInterval(() => {
+    if (!audioCtx || audioCtx.state === 'closed') return;
+    if (Math.random() < 0.5) playShot(masterGain, 0.5);
+  }, 300 + Math.random() * 200);
+
+  approachSoundNodes = { masterGain, interval };
+}
+
+function stopApproachSound() {
+  if (!approachSoundNodes) return;
+  clearInterval(approachSoundNodes.interval);
+  try { approachSoundNodes.masterGain.disconnect(); } catch (e) {}
+  approachSoundNodes = null;
+}
+
+// Звук боя
+let battleSoundNodes = null;
+
+function startBattleSound(intensity = 1) {
+  if (!audioCtx) return;
+  stopBattleSound();
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.15 * intensity;
+  masterGain.connect(audioCtx.destination);
+
+  const interval = setInterval(() => {
+    if (!audioCtx || audioCtx.state === 'closed') return;
+    playShot(masterGain, intensity);
+  }, 120 + Math.random() * 80);
+
+  const explodeInterval = setInterval(() => {
+    if (!audioCtx || audioCtx.state === 'closed') return;
+    if (Math.random() < 0.3) playExplosion(masterGain, intensity);
+  }, 800);
+
+  battleSoundNodes = { masterGain, interval, explodeInterval };
+}
+
+function stopBattleSound() {
+  if (!battleSoundNodes) return;
+  clearInterval(battleSoundNodes.interval);
+  clearInterval(battleSoundNodes.explodeInterval);
+  try { battleSoundNodes.masterGain.disconnect(); } catch (e) {}
+  battleSoundNodes = null;
+}
+
 // ============ КОНСТАНТЫ ============
 const FACTIONS = {
   aurora: {
@@ -167,13 +288,9 @@ function calcTransferCost(composition) {
 
 // ИКОНКИ АТАК
 let apcImage = null;
-let missileImage = null;
-let droneImage = null;
 
 function loadAttackImages() {
   apcImage = new Image(); apcImage.src = 'icons/apc.png';
-  missileImage = new Image(); missileImage.src = 'icons/missile.png';
-  droneImage = new Image(); droneImage.src = 'icons/drone.png';
 }
 
 // ГАРНИЗОН
@@ -487,7 +604,6 @@ function generateRoads() {
     }
   });
 
-  // Пограничные связи (1 на город Авроры)
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
   auroraCities.forEach(aCity => {
@@ -850,7 +966,6 @@ function openCityPanel(city) {
   const buildBtn = document.getElementById('city-build-btn');
 
   if (isOwn) {
-    // Свой город — нет кнопки наступления
     attackBtn.style.display = 'none';
 
     transferBtn.style.display = 'flex';
@@ -881,7 +996,6 @@ function openCityPanel(city) {
     buildBtn.disabled = false;
     buildBtn.onclick = () => openBuildModal(city);
   } else {
-    // Вражеский — только наступление
     attackBtn.style.display = 'flex';
     const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && canAttack(c));
     if (sources.length > 0) {
@@ -1104,7 +1218,6 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
   const update = () => {
     body.innerHTML = '';
 
-    // Обнуляем всё, что не участвует в обычной атаке
     UNIT_ORDER.forEach(k => {
       if (!ATTACK_UNITS.includes(k)) {
         sendComposition[k] = 0;
@@ -1226,6 +1339,10 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     speed: 0.1 * weather.speedMult * dayEff.speedMult * speedMult,
     type: isTransfer ? 'transfer' : 'attack',
     line: 1,
+    phase: 'moving',
+    battleProgress: 0,
+    battleDuration: 0,
+    casualtyBuffer: 0,
   });
 
   state.lastAttackTime = state.globalTime;
@@ -1234,6 +1351,10 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     setEventMessage(`🔄 Переброска: ${sendFromCity.name} → ${sendToCity.name}`, 'info');
   } else {
     setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
+    // Запускаем звук отстрела если у цели есть гарнизон
+    if (sendToCity.garrison && getGarrisonTotal(sendToCity.garrison) > 0) {
+      startApproachSound(0.6);
+    }
   }
 
   document.getElementById('send-modal').classList.add('hidden');
@@ -1642,18 +1763,112 @@ function closeBuildModal() {
 }
 document.getElementById('build-modal-close').addEventListener('click', closeBuildModal);
 
-// ============ АТАКИ ============
+// ============ БОЙ ============
+function calcBattleDuration(attacker, defender) {
+  const attackerTotal = UNIT_ORDER.reduce((s, k) => s + (attacker[k] || 0), 0);
+  const defenderTotal = UNIT_ORDER.reduce((s, k) => s + (defender[k] || 0), 0);
+  const total = attackerTotal + defenderTotal;
+  return Math.min(15, 10 + total * 0.1);
+}
+
+function applyApproachCasualties(atk, dt) {
+  const defender = atk.to;
+  const defenderGarrison = defender.garrison || {};
+
+  const defenderPower = UNIT_ORDER.reduce((s, k) =>
+    s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0
+  );
+
+  if (defenderPower === 0) return;
+
+  const fortMult = 1 + (defender.fortification || 0) * 0.25;
+  const casualtyPower = defenderPower * 0.05 * fortMult * dt;
+
+  if (!atk.casualtyBuffer) atk.casualtyBuffer = 0;
+  atk.casualtyBuffer += casualtyPower;
+
+  const priorities = ['infantry', 'tanks'];
+  let accumulated = atk.casualtyBuffer;
+
+  priorities.forEach(unitType => {
+    if (accumulated < 1) return;
+    const available = atk.composition[unitType] || 0;
+    if (available === 0) return;
+
+    const unitPower = UNIT_TYPES[unitType].power;
+    const unitsCanKill = accumulated / unitPower;
+    const kill = Math.min(available, Math.floor(unitsCanKill));
+
+    if (kill > 0) {
+      atk.composition[unitType] = available - kill;
+      accumulated -= kill * unitPower;
+
+      // Эффект потерь на пути
+      const t = atk.progress;
+      const wx = atk.from.x + (atk.to.x - atk.from.x) * t;
+      const wy = atk.from.y + (atk.to.y - atk.from.y) * t;
+      state.captureEffects.push({
+        x: wx, y: wy,
+        start: performance.now(),
+        duration: 400,
+        color: '#ff3b5c',
+      });
+    }
+  });
+
+  atk.casualtyBuffer = accumulated;
+}
+
 function updateAttacks(dt) {
   for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
     const atk = ACTIVE_ATTACKS[i];
-    atk.progress += atk.speed * dt;
-    if (atk.progress >= 1) {
-      if (atk.type === 'transfer') {
-        resolveTransfer(atk.from, atk.to, atk.composition);
-      } else {
-        resolveBattle(atk.from, atk.to, atk.composition);
+
+    // Фаза движения
+    if (!atk.phase || atk.phase === 'moving') {
+      atk.progress += atk.speed * dt;
+
+      // Отстрел при подходе
+      if (atk.type !== 'transfer') {
+        applyApproachCasualties(atk, dt);
+
+        const remaining = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0), 0);
+        if (remaining === 0) {
+          setEventMessage(`💀 Отряд уничтожен на подходе к ${atk.to.name}`, 'danger');
+          ACTIVE_ATTACKS.splice(i, 1);
+
+          const movingAttacks = ACTIVE_ATTACKS.filter(a => a.phase === 'moving' || !a.phase);
+          if (movingAttacks.length === 0) stopApproachSound();
+          continue;
+        }
       }
-      ACTIVE_ATTACKS.splice(i, 1);
+
+      if (atk.progress >= 1) {
+        if (atk.type === 'transfer') {
+          resolveTransfer(atk.from, atk.to, atk.composition);
+          ACTIVE_ATTACKS.splice(i, 1);
+        } else {
+          // Начало боя
+          atk.phase = 'battle';
+          atk.battleProgress = 0;
+          atk.battleDuration = calcBattleDuration(atk.composition, atk.to.garrison);
+
+          // Переключение звука
+          const movingAttacks = ACTIVE_ATTACKS.filter(a => a.phase === 'moving' || !a.phase);
+          if (movingAttacks.length === 0) stopApproachSound();
+          startBattleSound(0.8);
+        }
+      }
+    }
+    // Фаза боя
+    else if (atk.phase === 'battle') {
+      atk.battleProgress += dt / atk.battleDuration;
+      if (atk.battleProgress >= 1) {
+        resolveBattle(atk.from, atk.to, atk.composition);
+        ACTIVE_ATTACKS.splice(i, 1);
+
+        const otherBattles = ACTIVE_ATTACKS.filter(a => a.phase === 'battle');
+        if (otherBattles.length === 0) stopBattleSound();
+      }
     }
   }
 }
@@ -1728,7 +1943,7 @@ function resolveBattle(fromCity, toCity, composition) {
   checkVictory();
 }
 
-// ============ ДЕНЬ/НОЧЬ / ПОГОДА ============
+// ============ ДЕНЬ/НОЧЬ ============
 function getCurrentPhase() {
   const t = state.dayTime % 1;
   for (const phase of DAY_PHASES) {
@@ -1775,7 +1990,7 @@ function getSituation() {
 function getCityThreat(city) {
   let totalEnemyPower = 0;
   ACTIVE_ATTACKS.forEach(atk => {
-    if (atk.to === city && atk.from.owner === state.enemyFaction && atk.type !== 'transfer') {
+    if (atk.to === city && atk.from.owner === state.enemyFaction && atk.type !== 'transfer' && (!atk.phase || atk.phase === 'moving')) {
       const atkPower = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
       totalEnemyPower += atkPower;
     }
@@ -2149,17 +2364,6 @@ function renderCaptureEffects() {
     ctx.arc(sx, sy, radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    if (progress > 0.2) {
-      const p2 = (progress - 0.2) / 0.8;
-      const r2 = maxRadius * 0.7 * p2;
-      const a2 = (1 - p2) * 0.5;
-      ctx.globalAlpha = a2;
-      ctx.lineWidth = 2 * camera.zoom;
-      ctx.beginPath();
-      ctx.arc(sx, sy, r2, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
     if (progress < 0.3) {
       const flashAlpha = (1 - progress / 0.3) * 0.6;
       ctx.globalAlpha = flashAlpha;
@@ -2358,12 +2562,6 @@ function renderAttacks() {
 
   ACTIVE_ATTACKS.forEach(atk => {
     const a = atk.from, b = atk.to;
-    const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
-    const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
-    const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
-    const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
-    const cx = x1 + (x2 - x1) * atk.progress;
-    const cy = y1 + (y2 - y1) * atk.progress;
 
     const attacker = atk.from.owner;
     const isEnemyAttackOnUs = attacker === state.enemyFaction && b.owner === state.faction;
@@ -2375,6 +2573,83 @@ function renderAttacks() {
     else if (isEnemyAttackOnUs) color = '#ff3b5c';
     else if (isOurAttack) color = '#00ff88';
     else color = '#ff9500';
+
+    // ФАЗА БОЯ — рисуем иконку у цели
+    if (atk.phase === 'battle') {
+      const sx = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+      const sy = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+
+      const iconSize = Math.max(20, 26 * camera.zoom);
+      const pulseScale = 1 + Math.sin(now / 200) * 0.15;
+      const finalSize = iconSize * pulseScale;
+
+      // Вспышки боя
+      for (let i = 0; i < 3; i++) {
+        if (Math.random() < 0.4) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * 30 * camera.zoom;
+          const fx = sx + Math.cos(angle) * dist;
+          const fy = sy + Math.sin(angle) * dist;
+          ctx.fillStyle = Math.random() < 0.5 ? '#ff9500' : '#ff3b5c';
+          ctx.globalAlpha = 0.6 + Math.random() * 0.4;
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+          ctx.arc(fx, fy, 2 + Math.random() * 4 * camera.zoom, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Трассеры
+      for (let i = 0; i < 2; i++) {
+        if (Math.random() < 0.3) {
+          const angle = Math.random() * Math.PI * 2;
+          const len = 15 + Math.random() * 25 * camera.zoom;
+          const ex = sx + Math.cos(angle) * len;
+          const ey = sy + Math.sin(angle) * len;
+
+          ctx.strokeStyle = Math.random() < 0.7 ? '#ffcc00' : '#ff3b5c';
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Иконка БМП в стороне
+      ctx.fillStyle = 'rgba(10, 15, 25, 0.9)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(sx + 20 * camera.zoom, sy - 20 * camera.zoom, finalSize / 2 + 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      if (apcImage && apcImage.complete && apcImage.naturalWidth > 0) {
+        ctx.drawImage(apcImage,
+          sx + 20 * camera.zoom - finalSize / 2 * 0.7,
+          sy - 20 * camera.zoom - finalSize / 2 * 0.7,
+          finalSize * 0.7, finalSize * 0.7);
+      }
+      ctx.shadowBlur = 0;
+
+      return;
+    }
+
+    // ФАЗА ДВИЖЕНИЯ
+    const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+    const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+    const cx = x1 + (x2 - x1) * atk.progress;
+    const cy = y1 + (y2 - y1) * atk.progress;
 
     const pulseAlpha = (isEnemyAttackOnUs && !isTransfer)
       ? 0.4 + Math.sin(now / 150) * 0.3
@@ -2398,7 +2673,12 @@ function renderAttacks() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    const iconSize = Math.max(20, 26 * camera.zoom);
+    // Размер иконки зависит от остатка войск
+    const totalInComposition = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0), 0);
+    const originalSize = Math.max(20, 26 * camera.zoom);
+    const healthRatio = Math.min(1, totalInComposition / 5);
+    const iconSize = originalSize * (0.5 + healthRatio * 0.5);
+
     const pulseScale = 1 + Math.sin(now / 400) * 0.08;
     const finalSize = iconSize * pulseScale;
 
