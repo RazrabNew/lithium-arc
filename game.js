@@ -114,13 +114,21 @@ const LANG = {
   },
 };
 
-// UNIT TYPES
+// SVG-пути для родов войск
+const UNIT_SVG = {
+  infantry: 'icons/soldier.svg',
+  tanks:    'icons/tank.svg',
+  aa:       'icons/anti-aircraft.svg',
+  missiles: 'icons/missile.svg',
+  drones:   'icons/drone.svg',
+};
+
 const UNIT_TYPES = {
-  infantry: { icon: '🪖', ru: 'Пехота', en: 'Infantry', cost: { weapons: 5, fuel: 0.5, money: 30 }, power: 1.0 },
-  tanks:    { icon: '🛡️', ru: 'Танки', en: 'Tanks', cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
-  aa:       { icon: '🎯', ru: 'ПВО', en: 'Air defense', cost: { weapons: 8, fuel: 3, money: 120 }, power: 1.5 },
-  missiles: { icon: '🚀', ru: 'Ракеты', en: 'Missiles', cost: { weapons: 15, fuel: 5, money: 250 }, power: 5.0 },
-  drones:   { icon: '✈️', ru: 'Дроны', en: 'Drones', cost: { drones: 1, money: 60 }, power: 0.8 },
+  infantry: { icon: 'soldier.svg', ru: 'Пехота', en: 'Infantry', cost: { weapons: 5, fuel: 0.5, money: 30 }, power: 1.0 },
+  tanks:    { icon: 'tank.svg', ru: 'Танки', en: 'Tanks', cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
+  aa:       { icon: 'anti-aircraft.svg', ru: 'ПВО', en: 'Air defense', cost: { weapons: 8, fuel: 3, money: 120 }, power: 1.5 },
+  missiles: { icon: 'missile.svg', ru: 'Ракеты', en: 'Missiles', cost: { weapons: 15, fuel: 5, money: 250 }, power: 5.0 },
+  drones:   { icon: 'drone.svg', ru: 'Дроны', en: 'Drones', cost: { drones: 1, money: 60 }, power: 0.8 },
 };
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
@@ -147,22 +155,22 @@ function canHire(city, unitType, count = 1) {
 
 // WEATHER
 const WEATHER = {
-  clear:    { icon: '☀️', ru: 'Ясно',   en: 'Clear',    speedMult: 1.0, incomeMult: 1.00, welfareDelta: 0,     aaMult: 1.0 },
-  rain:     { icon: '🌧️', ru: 'Дождь',  en: 'Rain',     speedMult: 0.8, incomeMult: 0.95, welfareDelta: 0,     aaMult: 1.0 },
-  snow:     { icon: '❄️', ru: 'Снег',   en: 'Snow',     speedMult: 0.6, incomeMult: 0.90, welfareDelta: -0.05, aaMult: 1.0 },
-  fog:      { icon: '🌫️', ru: 'Туман',  en: 'Fog',      speedMult: 0.7, incomeMult: 1.00, welfareDelta: 0,     aaMult: 0.8 },
-  storm:    { icon: '⛈️', ru: 'Гроза',  en: 'Storm',    speedMult: 0.5, incomeMult: 0.85, welfareDelta: -0.10, aaMult: 0.8 },
-  blizzard: { icon: '🌪️', ru: 'Буря',   en: 'Blizzard', speedMult: 0.4, incomeMult: 0.75, welfareDelta: -0.15, aaMult: 0.7 },
+  clear:    { icon: 'sun.svg', ru: 'Ясно',   en: 'Clear',    speedMult: 1.0, incomeMult: 1.00, welfareDelta: 0,     aaMult: 1.0 },
+  rain:     { icon: 'rain.svg', ru: 'Дождь',  en: 'Rain',     speedMult: 0.8, incomeMult: 0.95, welfareDelta: 0,     aaMult: 1.0 },
+  snow:     { icon: 'snow.svg', ru: 'Снег',   en: 'Snow',     speedMult: 0.6, incomeMult: 0.90, welfareDelta: -0.05, aaMult: 1.0 },
+  fog:      { icon: 'fog.svg', ru: 'Туман',  en: 'Fog',      speedMult: 0.7, incomeMult: 1.00, welfareDelta: 0,     aaMult: 0.8 },
+  storm:    { icon: 'storm.svg', ru: 'Гроза',  en: 'Storm',    speedMult: 0.5, incomeMult: 0.85, welfareDelta: -0.10, aaMult: 0.8 },
+  blizzard: { icon: 'tornado.svg', ru: 'Буря',   en: 'Blizzard', speedMult: 0.4, incomeMult: 0.75, welfareDelta: -0.15, aaMult: 0.7 },
 };
 const WEATHER_KEYS = ['clear', 'clear', 'clear', 'rain', 'rain', 'snow', 'fog', 'storm', 'blizzard'];
 
 // DAY/NIGHT
 const DAY_CYCLE_DURATION = 240;
 const DAY_PHASES = [
-  { key: 'dawn',  icon: '🌅', ru: 'Рассвет', en: 'Dawn',  start: 0.000, end: 0.125 },
-  { key: 'day',   icon: '☀️', ru: 'День',    en: 'Day',   start: 0.125, end: 0.500 },
-  { key: 'dusk',  icon: '🌇', ru: 'Закат',   en: 'Dusk',  start: 0.500, end: 0.625 },
-  { key: 'night', icon: '🌙', ru: 'Ночь',    en: 'Night', start: 0.625, end: 1.000 },
+  { key: 'dawn',  icon: 'sun.svg', ru: 'Рассвет', en: 'Dawn',  start: 0.000, end: 0.125 },
+  { key: 'day',   icon: 'sun.svg', ru: 'День',    en: 'Day',   start: 0.125, end: 0.500 },
+  { key: 'dusk',  icon: 'sun.svg', ru: 'Закат',   en: 'Dusk',  start: 0.500, end: 0.625 },
+  { key: 'night', icon: 'moon.svg', ru: 'Ночь',    en: 'Night', start: 0.625, end: 1.000 },
 ];
 const DAY_EFFECTS = {
   dawn:  { incomeMult: 1.00, speedMult: 1.00, welfareDelta: 0,     darkness: 0.15 },
@@ -226,29 +234,31 @@ const TECH_CFG = {
   life: 380, birth: 280,
 };
 const BUILDINGS_CFG = {
-  mine: { ru: 'Шахта', en: 'Mine', cost: 850 },
-  factory: { ru: 'Завод', en: 'Factory', cost: 700 },
-  ammoFactory: { ru: 'Завод боеприпасов', en: 'Ammo factory', cost: 1020 },
-  weaponFactory: { ru: 'Оружейный завод', en: 'Weapon factory', cost: 1360 },
-  tankFactory: { ru: 'Танковый завод', en: 'Tank factory', cost: 1200 },
-  oilWell: { ru: 'Нефтяная скважина', en: 'Oil well', cost: 1105 },
+  mine: { ru: 'Шахта', en: 'Mine', cost: 850, icon: 'pickaxe.svg' },
+  factory: { ru: 'Завод', en: 'Factory', cost: 700, icon: 'factory.svg' },
+  ammoFactory: { ru: 'Завод боеприпасов', en: 'Ammo factory', cost: 1020, icon: 'ammo-box.svg' },
+  weaponFactory: { ru: 'Оружейный завод', en: 'Weapon factory', cost: 1360, icon: 'sword.svg' },
+  tankFactory: { ru: 'Танковый завод', en: 'Tank factory', cost: 1200, icon: 'tank.svg' },
+  oilWell: { ru: 'Нефтяная скважина', en: 'Oil well', cost: 1105, icon: 'oil-pump.svg' },
 };
 const FORTIFICATIONS = [
-  { level: 0, icon: '🏘️', ru: 'Открытый', en: 'Open', cost: 0 },
-  { level: 1, icon: '🛡️', ru: 'Окопы', en: 'Trenches', cost: 50 },
-  { level: 2, icon: '🏰', ru: 'Бункеры', en: 'Bunkers', cost: 150 },
-  { level: 3, icon: '🚀', ru: 'ПВО', en: 'Air def', cost: 300 },
-  { level: 4, icon: '🛰️', ru: 'РЭБ', en: 'EW', cost: 600 },
+  { level: 0, icon: 'buildings.svg', ru: 'Открытый', en: 'Open', cost: 0 },
+  { level: 1, icon: 'shield.svg', ru: 'Окопы', en: 'Trenches', cost: 50 },
+  { level: 2, icon: 'castle.svg', ru: 'Бункеры', en: 'Bunkers', cost: 150 },
+  { level: 3, icon: 'anti-aircraft.svg', ru: 'ПВО', en: 'Air def', cost: 300 },
+  { level: 4, icon: 'cargo.svg', ru: 'РЭБ', en: 'EW', cost: 600 },
 ];
 const MAX_BUILDINGS = 8;
 
+// Хелпер: получить HTML-строку с SVG-иконкой
+function svgIcon(file, colorClass = 'icon-cyan', extraClass = 'svg-icon-inline') {
+  return `<img class="${extraClass} ${colorClass}" src="icons/${file}" alt="">`;
+}
+
 // ============ NOISE ============
 function initNoise() {
-  if (typeof SimplexNoise !== 'undefined') {
-    noiseGen = new SimplexNoise();
-  } else {
-    noiseGen = { noise2D: (x, y) => Math.sin(x * 0.5) * Math.cos(y * 0.5) * 0.5 };
-  }
+  if (typeof SimplexNoise !== 'undefined') noiseGen = new SimplexNoise();
+  else noiseGen = { noise2D: (x, y) => Math.sin(x * 0.5) * Math.cos(y * 0.5) * 0.5 };
 }
 
 function fbm(x, y, octaves = 4, scale = 0.01) {
@@ -490,7 +500,6 @@ function generateOverlayCanvas() {
   const delaunay = d3.Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, WORLD_W, WORLD_H]);
 
-  // Регионы
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
@@ -512,7 +521,6 @@ function generateOverlayCanvas() {
     octx.fill();
   });
 
-  // Пунктирные границы
   octx.setLineDash([8, 6]);
   octx.strokeStyle = 'rgba(15, 20, 30, 0.9)';
   octx.lineWidth = 1.5;
@@ -526,7 +534,6 @@ function generateOverlayCanvas() {
   });
   octx.setLineDash([]);
 
-  // Границы фракций
   for (let i = 0; i < CITIES.length; i++) {
     for (const j of voronoi.neighbors(i)) {
       if (i >= j) continue;
@@ -548,11 +555,7 @@ function generateOverlayCanvas() {
     }
   }
 
-  // Река
   drawRiverOverlay(octx);
-
-  // Горы
-  drawMountainsOverlay(octx);
 }
 
 function drawRiverOverlay(octx) {
@@ -586,55 +589,6 @@ function drawRiverOverlay(octx) {
     }
   });
   octx.stroke();
-}
-
-function drawMountainsOverlay(octx) {
-  const edgeSize = 20;
-  for (let x = 0; x < WORLD_W; x += 24) {
-    drawMountainTriple(octx, x + 12, edgeSize, 1.2);
-    drawMountainTriple(octx, x + 12, WORLD_H - edgeSize, 1.2);
-  }
-  for (let y = edgeSize; y < WORLD_H - edgeSize; y += 24) {
-    drawMountainTriple(octx, edgeSize, y, 1.2);
-    drawMountainTriple(octx, WORLD_W - edgeSize, y, 1.2);
-  }
-  let cx = WORLD_W * 0.5, phase = 0;
-  for (let y = 40; y < WORLD_H - 40; y += 20) {
-    phase += 0.3;
-    cx += Math.sin(phase) * 8;
-    const size = 14 + Math.sin(y * 0.1) * 4;
-    drawMountainTriple(octx, cx, y, size / 20);
-  }
-}
-
-function drawMountainTriple(ctx, cx, cy, scale = 1) {
-  const h = 18 * scale, w = 14 * scale;
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - h);
-  ctx.lineTo(cx - w, cy + h * 0.5);
-  ctx.lineTo(cx + w, cy + h * 0.5);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(70, 65, 60, 0.9)';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - h);
-  ctx.lineTo(cx - w * 0.7, cy + h * 0.5);
-  ctx.lineTo(cx + w * 0.7, cy + h * 0.5);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(100, 95, 90, 0.6)';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - h);
-  ctx.lineTo(cx - w * 0.7, cy + h * 0.5);
-  ctx.lineTo(cx, cy + h * 0.5);
-  ctx.closePath(); ctx.fill();
-  if (scale > 0.9) {
-    ctx.fillStyle = 'rgba(230, 230, 240, 0.75)';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - h);
-    ctx.lineTo(cx - w * 0.25, cy - h * 0.5);
-    ctx.lineTo(cx + w * 0.25, cy - h * 0.5);
-    ctx.closePath(); ctx.fill();
-  }
 }
 
 // ============ CANVAS / УПРАВЛЕНИЕ ============
@@ -794,11 +748,14 @@ function openCityPanel(city) {
     city.type === 'medium' ? dict.typeMedium : dict.typeSmall;
   const g = city.garrison || makeEmptyGarrison();
   const gTotal = getGarrisonTotal(g);
-  const gStr = UNIT_ORDER.filter(k => g[k] > 0).map(k => `${UNIT_TYPES[k].icon}${g[k]}`).join(' ') || '—';
-  document.getElementById('city-garrison').textContent = `${gTotal} (${gStr})`;
+  const gStr = UNIT_ORDER.filter(k => g[k] > 0)
+    .map(k => `<img class="svg-icon-inline icon-cyan" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}`)
+    .join(' ') || '—';
+  document.getElementById('city-garrison').innerHTML = `${gTotal} (${gStr})`;
   document.getElementById('city-infra').textContent = city.infrastructure + '%';
   const fort = getFortification(city);
-  document.getElementById('city-defense').textContent = `${fort.icon} ${lang === 'ru' ? fort.ru : fort.en}`;
+  document.getElementById('city-defense').innerHTML =
+    `<img class="svg-icon-inline icon-blue" src="icons/${fort.icon}" alt=""> ${lang === 'ru' ? fort.ru : fort.en}`;
   const isOwn = city.owner === state.faction;
   const income = isOwn ? city.baseIncome * (city.infrastructure / 100) * (state.welfare / 100) : 0;
   document.getElementById('city-income').textContent = isOwn ? '+' + income.toFixed(2) + '/с' : '—';
@@ -806,7 +763,9 @@ function openCityPanel(city) {
   const totalBuildings = Object.values(buildings).reduce((a, b) => a + b, 0);
   document.getElementById('city-buildings').textContent = totalBuildings > 0 ? totalBuildings : '—';
   const isStrategic = totalBuildings >= 5;
-  document.getElementById('city-strategic').textContent = isStrategic ? '⚠️ Да' : 'Нет';
+  document.getElementById('city-strategic').innerHTML = isStrategic
+    ? `<img class="svg-icon-inline icon-red" src="icons/Warning.svg" alt=""> Да`
+    : 'Нет';
   document.getElementById('city-strategic').style.color = isStrategic ? '#ff3b5c' : '';
 
   const attackBtn = document.getElementById('city-attack-btn');
@@ -815,34 +774,33 @@ function openCityPanel(city) {
   const buildBtn = document.getElementById('city-build-btn');
 
   if (isOwn) {
-    attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
     attackBtn.disabled = !canAttack(city);
     attackBtn.onclick = () => openSendModal(city);
-    hireBtn.style.display = 'block';
+    hireBtn.style.display = 'flex';
     hireBtn.disabled = false;
     hireBtn.onclick = () => openHireModal(city);
     const nextFort = FORTIFICATIONS[(city.fortification || 0) + 1];
     if (nextFort) {
-      fortifyBtn.textContent = `${nextFort.icon} ${lang === 'ru' ? nextFort.ru : nextFort.en} (${nextFort.cost}💰)`;
+      fortifyBtn.innerHTML =
+        `<img class="svg-icon icon-blue" src="icons/${nextFort.icon}" alt=""><span>${lang === 'ru' ? nextFort.ru : nextFort.en} (${nextFort.cost})</span>`;
       fortifyBtn.disabled = state.money < nextFort.cost;
-      fortifyBtn.style.display = 'block';
+      fortifyBtn.style.display = 'flex';
       fortifyBtn.onclick = () => fortifyCity(city);
     } else {
-      fortifyBtn.textContent = '✅ ' + (lang === 'ru' ? 'Максимум' : 'Max');
-      fortifyBtn.disabled = true; fortifyBtn.style.display = 'block';
+      fortifyBtn.innerHTML = `<span>✅ Максимум</span>`;
+      fortifyBtn.disabled = true; fortifyBtn.style.display = 'flex';
     }
-    buildBtn.style.display = 'block';
+    buildBtn.style.display = 'flex';
     buildBtn.disabled = false;
     buildBtn.onclick = () => openBuildModal(city);
   } else {
     const sources = getRoadsFrom(city).filter(c => c.owner === state.faction && canAttack(c));
     if (sources.length > 0) {
-      attackBtn.textContent = '⚔️ ' + (lang === 'ru' ? 'Наступление' : 'Attack');
       attackBtn.disabled = false;
       attackBtn.onclick = () => openAttackSourcesPanel(city, sources);
     } else {
-      attackBtn.textContent = '🚫 ' + (lang === 'ru' ? 'Нет атак' : 'No attacks');
-      attackBtn.disabled = true; attackBtn.onclick = null;
+      attackBtn.disabled = true;
+      attackBtn.onclick = null;
     }
     hireBtn.style.display = 'none'; fortifyBtn.style.display = 'none'; buildBtn.style.display = 'none';
   }
@@ -942,7 +900,7 @@ function openSendCompositionModal(fromCity, toCity) {
   const title = document.getElementById('send-modal-title');
   const body = document.getElementById('send-modal-body');
   const lang = state.settings.language;
-  title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}`;
+  title.textContent = `${fromCity.name} → ${toCity.name}`;
 
   const update = () => {
     body.innerHTML = '';
@@ -954,7 +912,10 @@ function openSendCompositionModal(fromCity, toCity) {
       const row = document.createElement('div');
       row.className = 'send-row';
       row.innerHTML = `
-        <div class="send-row-name">${ut.icon} ${lang === 'ru' ? ut.ru : ut.en} (${available})</div>
+        <div class="send-row-name">
+          <img class="svg-icon-inline icon-cyan" src="icons/${ut.icon}" alt="">
+          ${lang === 'ru' ? ut.ru : ut.en} (${available})
+        </div>
         <div class="send-row-controls">
           <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${current <= 0 ? 'disabled' : ''}>−</button>
           <div class="send-row-value">${current}</div>
@@ -1021,28 +982,28 @@ function openHireModal(city) {
   title.textContent = `${lang === 'ru' ? 'Найм' : 'Hire'} · ${city.name}`;
   body.innerHTML = '';
   res.innerHTML = `
-    <span>💰 <b>${Math.floor(state.money)}</b></span>
-    <span>🔫 <b>${Math.floor(state.resources.weapons)}</b></span>
-    <span>🛡️ <b>${Math.floor(state.resources.tanks)}</b></span>
-    <span>⛽ <b>${Math.floor(state.resources.fuel)}</b></span>
-    <span>✈️ <b>${Math.floor(state.resources.drones)}</b></span>
+    <span><img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <b>${Math.floor(state.money)}</b></span>
+    <span><img class="svg-icon-inline icon-cyan" src="icons/sword.svg" alt=""> <b>${Math.floor(state.resources.weapons)}</b></span>
+    <span><img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> <b>${Math.floor(state.resources.tanks)}</b></span>
+    <span><img class="svg-icon-inline icon-gold" src="icons/oil-barrel.svg" alt=""> <b>${Math.floor(state.resources.fuel)}</b></span>
+    <span><img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> <b>${Math.floor(state.resources.drones)}</b></span>
   `;
   UNIT_ORDER.forEach(key => {
     const ut = UNIT_TYPES[key];
     const count = city.garrison[key] || 0;
     const cost = ut.cost;
     const costStr = [
-      cost.weapons ? `${cost.weapons}🔫` : '',
-      cost.tanks ? `${cost.tanks}🛡️` : '',
-      cost.fuel ? `${cost.fuel}⛽` : '',
-      cost.drones ? `${cost.drones}✈️` : '',
-      cost.money ? `${cost.money}💰` : '',
+      cost.weapons ? `<img class="svg-icon-inline icon-cyan" src="icons/sword.svg" alt=""> ${cost.weapons}` : '',
+      cost.tanks ? `<img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> ${cost.tanks}` : '',
+      cost.fuel ? `<img class="svg-icon-inline icon-gold" src="icons/oil-barrel.svg" alt=""> ${cost.fuel}` : '',
+      cost.drones ? `<img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> ${cost.drones}` : '',
+      cost.money ? `<img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> ${cost.money}` : '',
     ].filter(Boolean).join(' + ');
     const row = document.createElement('div');
     row.className = 'hire-row';
     row.innerHTML = `
       <div class="hire-row-info">
-        <div class="hire-row-name">${ut.icon} ${lang === 'ru' ? ut.ru : ut.en}</div>
+        <div class="hire-row-name"><img class="svg-icon-inline icon-cyan" src="icons/${ut.icon}" alt=""> ${lang === 'ru' ? ut.ru : ut.en}</div>
         <div class="hire-row-count">В гарнизоне: ${count}</div>
         <div class="hire-row-cost">${costStr}</div>
       </div>
@@ -1076,6 +1037,7 @@ function closeHireModal() {
   hireCity = null;
 }
 document.getElementById('hire-modal-close').addEventListener('click', closeHireModal);
+
 // ============ ДЕЙСТВИЯ ============
 function openActionsPanel() {
   document.getElementById('actions-modal').classList.remove('hidden');
@@ -1242,9 +1204,9 @@ function updateLogisticsPanel() {
     }
   });
   const mobBtn = document.getElementById('mobilize-btn');
-  if (state.tech.mobilization < 1) { mobBtn.disabled = true; mobBtn.textContent = '📣 Мобилизация недоступна'; }
-  else if (state.mobilizeCooldown > 0) { mobBtn.disabled = true; mobBtn.textContent = `⏳ ${Math.ceil(state.mobilizeCooldown)}с`; }
-  else { mobBtn.disabled = false; mobBtn.textContent = '📣 Мобилизация · призыв'; }
+  if (state.tech.mobilization < 1) { mobBtn.disabled = true; mobBtn.querySelector('span').textContent = 'Мобилизация недоступна'; }
+  else if (state.mobilizeCooldown > 0) { mobBtn.disabled = true; mobBtn.querySelector('span').textContent = `Перезарядка ${Math.ceil(state.mobilizeCooldown)}с`; }
+  else { mobBtn.disabled = false; mobBtn.querySelector('span').textContent = 'Мобилизация · призыв'; }
 }
 
 // ============ ПРОИЗВОДСТВО ============
@@ -1369,10 +1331,12 @@ function openBuildModal(city) {
     row.className = 'build-row';
     row.innerHTML = `
       <div class="build-info">
-        <div class="build-name">${b[lang]}</div>
+        <div class="build-name"><img class="svg-icon-inline icon-gold" src="icons/${b.icon}" alt=""> ${b[lang]}</div>
         <div class="build-count">Построено: ${count}/${MAX_BUILDINGS}</div>
       </div>
-      <button class="build-action" data-key="${key}" ${canBuild ? '' : 'disabled'}>💰 ${cost}</button>
+      <button class="build-action" data-key="${key}" ${canBuild ? '' : 'disabled'}>
+        <img class="svg-icon-inline icon-white" src="icons/coins.svg" alt=""> ${cost}
+      </button>
     `;
     body.appendChild(row);
   });
@@ -1461,9 +1425,9 @@ function showBattleResult(fromCity, toCity, victory, attacker, defender, attacke
   const title = document.getElementById('battle-modal-title');
   const body = document.getElementById('battle-modal-body');
   const lang = state.settings.language;
-  title.textContent = `⚔️ ${lang === 'ru' ? 'Бой за' : 'Battle for'} ${toCity.name}`;
+  title.textContent = `${lang === 'ru' ? 'Бой за' : 'Battle for'} ${toCity.name}`;
   const fmtG = (g, losses) => UNIT_ORDER.filter(k => (g[k] || 0) > 0)
-    .map(k => `${UNIT_TYPES[k].icon}${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
+    .map(k => `<img class="svg-icon-inline icon-cyan" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
   body.innerHTML = `
     <div class="battle-result ${victory ? 'battle-victory' : 'battle-defeat'}">
       <h3>${victory ? '✅ ' + (lang === 'ru' ? 'ПОБЕДА' : 'VICTORY') : '💀 ' + (lang === 'ru' ? 'ПОРАЖЕНИЕ' : 'DEFEAT')}</h3>
@@ -1578,7 +1542,6 @@ function update(dt) {
   state.money += calcIncome() * dt;
   state.globalTime += dt;
 
-  // Погода
   state.weatherTimer -= dt;
   if (state.weatherTimer <= 0) {
     state.weather = WEATHER_KEYS[Math.floor(Math.random() * WEATHER_KEYS.length)];
@@ -1586,11 +1549,9 @@ function update(dt) {
     state.weatherTimer = state.weatherDuration;
   }
 
-  // День/ночь
   state.dayTime += dt / DAY_CYCLE_DURATION;
   if (state.dayTime >= 1) state.dayTime -= 1;
 
-  // Ресурсы
   const prod = calcResourceProduction();
   state.resources.ammo = Math.min(RESOURCE_MAX.ammo, Math.max(0, state.resources.ammo + (prod.ammo - 0.56) * dt));
   state.resources.weapons = Math.min(RESOURCE_MAX.weapons, state.resources.weapons + prod.weapons * dt);
@@ -1599,14 +1560,12 @@ function update(dt) {
   const droneBuild = state.tech.dronefactory * 0.04;
   state.resources.drones = Math.min(RESOURCE_MAX.drones, state.resources.drones + droneBuild * dt);
 
-  // Население
   const birthRate = 8.0 + state.tech.birth * 1.2;
   const health = state.services.health;
   const deathRate = 13.0 * (1 - health / 100 * 0.45);
   const popDelta = state.population * (birthRate - deathRate) / 1000 / 86400;
   state.population = Math.max(1e6, state.population + popDelta * dt);
 
-  // Благо
   let wd = -0.05;
   if (state.taxRate > 0.30) wd -= (state.taxRate - 0.30) * 2;
   if (state.taxRate < 0.20) wd += (0.20 - state.taxRate) * 1.5;
@@ -1616,7 +1575,6 @@ function update(dt) {
   state.welfare = Math.max(0, Math.min(100, state.welfare + wd * dt));
   state.welfareTrend = wd;
 
-  // Коррупция
   let cd = 0.05;
   cd -= (state.services.science / 100) * 0.02;
   cd -= (state.services.order / 100) * 0.03;
@@ -1674,11 +1632,11 @@ function updateHUD() {
 
   const phase = getCurrentPhase();
   const lang = state.settings.language;
-  document.getElementById('time-icon').textContent = phase.icon;
+  document.getElementById('time-icon').src = 'icons/' + phase.icon;
   document.getElementById('time-name').textContent = lang === 'ru' ? phase.ru : phase.en;
 
   const weather = WEATHER[state.weather];
-  document.getElementById('weather-icon').textContent = weather.icon;
+  document.getElementById('weather-icon').src = 'icons/' + weather.icon;
   document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
   document.getElementById('weather-effect').textContent = '×' + weather.speedMult.toFixed(1);
 
@@ -1700,27 +1658,21 @@ function renderMap() {
   const srcX = camera.x, srcY = camera.y;
   const srcW = w / camera.zoom, srcH = h / camera.zoom;
 
-  // 1. Спутник
   if (worldTextureCanvas) ctx.drawImage(worldTextureCanvas, srcX, srcY, srcW, srcH, 0, 0, w, h);
-  // 2. Схема
   if (worldOverlayCanvas) ctx.drawImage(worldOverlayCanvas, srcX, srcY, srcW, srcH, 0, 0, w, h);
 
-  // 3. Дороги, атаки, города
   renderRoads();
   renderAttacks();
   renderCities();
 
-  // 4. Погода
   renderWeather();
 
-  // 5. Ночь
   const darkness = getDarknessAlpha();
   if (darkness > 0.01) {
     ctx.fillStyle = `rgba(5, 10, 25, ${darkness})`;
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 6. Виньетка
   renderVignette(w, h);
 }
 
@@ -1877,9 +1829,8 @@ function renderCities() {
     ctx.fill();
 
     if (c.fortification > 0 && camera.zoom > 0.7) {
-      const fort = FORTIFICATIONS[c.fortification];
-      ctx.font = `${Math.max(12, 16 * camera.zoom)}px sans-serif`;
-      ctx.fillText(fort.icon, sx + tileSize / 2, sy + tileSize / 2 - radius - 8);
+      ctx.font = `${Math.max(12, 14 * camera.zoom)}px sans-serif`;
+      ctx.fillText(FORTIFICATIONS[c.fortification].level > 0 ? '⭐'.repeat(Math.min(c.fortification, 3)) : '', sx + tileSize / 2, sy + tileSize / 2 - radius - 8);
     }
 
     const bTotal = Object.values(c.buildings || {}).reduce((a, b) => a + b, 0);
