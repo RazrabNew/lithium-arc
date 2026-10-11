@@ -3,162 +3,155 @@ const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
 // ============ AUDIO ============
-const soundBuffers = {
-  footsteps: null,
-  engine: null,
-  explosion: null,
+// Звуковые файлы лежат в sounds/
+const SOUND_PATHS = {
+  explosion: 'sounds/explosion.wav',
+  footsteps: 'sounds/footsteps_marching.wav',
+  engine:    'sounds/tank_engine.wav',
 };
 
-let audioCtx = null;
 let audioInitialized = false;
+let masterVolume = 0.6;
 
+// Пулы для коротких звуков (взрывы)
+let explosionPool = null;
+
+// Длинные лупы (фон при движении)
 let footstepsLoop = null;
 let engineLoop = null;
 
+// Состояние фоновых звуков
+let currentMarchState = 'none'; // 'none' | 'footsteps' | 'engine' | 'mixed'
+
+// Интервалы боя
+let battleIntervals = [];
+// Интервал редких отстрелов при подходе
+let approachShotInterval = null;
+
+function makeAudioPool(src, size = 6, volume = masterVolume) {
+  const pool = [];
+  for (let i = 0; i < size; i++) {
+    const a = new Audio(src);
+    a.preload = 'auto';
+    a.volume = volume;
+    pool.push(a);
+  }
+  return pool;
+}
+
 function initAudio() {
   if (audioInitialized) return;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioInitialized = true;
-    loadAllSounds();
-  } catch (e) {
-    console.warn('AudioContext не поддерживается', e);
-  }
-}
+  audioInitialized = true;
 
-async function loadAllSounds() {
-  if (!audioCtx) return;
-  const files = {
-    footsteps: 'sounds/footsteps_marching.wav',
-    engine: 'sounds/tank_engine.wav',
-    explosion: 'sounds/explosion.wav',
-  };
+  explosionPool = makeAudioPool(SOUND_PATHS.explosion, 6);
 
-  for (const [key, url] of Object.entries(files)) {
-    try {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      soundBuffers[key] = await audioCtx.decodeAudioData(arrayBuffer);
-      console.log(`✅ Загружен звук: ${key}`);
-    } catch (e) {
-      console.warn(`⚠️ Не удалось загрузить звук ${key}:`, e);
-    }
-  }
-}
+  footstepsLoop = new Audio(SOUND_PATHS.footsteps);
+  footstepsLoop.loop = true;
+  footstepsLoop.volume = 0;
 
-function playSound(name, volume = 1, rate = 1) {
-  if (!audioCtx || !soundBuffers[name]) return;
-  try {
-    const source = audioCtx.createBufferSource();
-    source.buffer = soundBuffers[name];
-    source.playbackRate.value = rate;
+  engineLoop = new Audio(SOUND_PATHS.engine);
+  engineLoop.loop = true;
+  engineLoop.volume = 0;
 
-    const gain = audioCtx.createGain();
-    gain.gain.value = volume;
-
-    source.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    source.start(0);
-  } catch (e) {
-    console.warn('Ошибка воспроизведения', e);
-  }
-}
-
-function startLoop(name, volume = 0.3) {
-  if (!audioCtx || !soundBuffers[name]) return null;
-  try {
-    const source = audioCtx.createBufferSource();
-    source.buffer = soundBuffers[name];
-    source.loop = true;
-
-    const gain = audioCtx.createGain();
-    gain.gain.value = volume;
-
-    source.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    source.start(0);
-    return { source, gain };
-  } catch (e) {
-    console.warn('Ошибка запуска лупа', e);
-    return null;
-  }
-}
-
-function stopLoop(loop) {
-  if (!loop) return;
-  try {
-    loop.source.stop();
-    loop.gain.disconnect();
-  } catch (e) {}
-}
-
-// ==== Управление звуками атак ====
-let currentSoundType = null;
-let lastSoundUpdate = 0;
-
-function updateAttackSounds() {
-  if (!audioCtx || audioCtx.state === 'suspended') return;
-
-  let infantryAttacks = 0;
-  let vehicleAttacks = 0;
-  let battles = 0;
-
-  ACTIVE_ATTACKS.forEach(atk => {
-    if (atk.from.owner !== state.faction) return;
-    if (atk.type === 'transfer') return;
-
-    const comp = atk.composition;
-    if (atk.phase === 'battle') {
-      battles++;
-    } else {
-      if ((comp.infantry || 0) > 0) infantryAttacks++;
-      if ((comp.tanks || 0) > 0) vehicleAttacks++;
-    }
-  });
-
-  // Если идёт бой — играем взрывы
-  if (battles > 0) {
-    stopLoop(footstepsLoop); footstepsLoop = null;
-    stopLoop(engineLoop); engineLoop = null;
-
-    if (Math.random() < 0.4) {
-      playSound('explosion', 0.35 + Math.random() * 0.3, 0.8 + Math.random() * 0.6);
-    }
-    currentSoundType = 'battle';
-    return;
-  }
-
-  // Идёт марш
-  let newType = null;
-  if (infantryAttacks > 0 && vehicleAttacks > 0) newType = 'mixed';
-  else if (infantryAttacks > 0) newType = 'infantry';
-  else if (vehicleAttacks > 0) newType = 'vehicles';
-
-  if (newType !== currentSoundType) {
-    stopLoop(footstepsLoop); footstepsLoop = null;
-    stopLoop(engineLoop); engineLoop = null;
-
-    if (newType === 'infantry' || newType === 'mixed') {
-      footstepsLoop = startLoop('footsteps', 0.25);
-    }
-    if (newType === 'vehicles' || newType === 'mixed') {
-      engineLoop = startLoop('engine', 0.20);
-    }
-    currentSoundType = newType;
-  }
-
-  // Отстрел на подходе (редкие одиночные взрывы)
-  if (infantryAttacks > 0 || vehicleAttacks > 0) {
-    if (Math.random() < 0.06) {
-      playSound('explosion', 0.12 + Math.random() * 0.15, 1.2 + Math.random() * 0.6);
-    }
-  }
+  // Разблокировка аудио на iOS/Telegram — беззвучный прогон
+  const silent = new Audio(SOUND_PATHS.explosion);
+  silent.volume = 0;
+  silent.play().catch(() => {});
 }
 
 document.addEventListener('touchstart', initAudio, { once: true });
 document.addEventListener('mousedown', initAudio, { once: true });
+
+// ---- Утилиты ----
+function playExplosion(volume = 1) {
+  if (!explosionPool) return;
+  let a = explosionPool.find(x => x.paused || x.ended);
+  if (!a) a = explosionPool[Math.floor(Math.random() * explosionPool.length)];
+  try {
+    a.currentTime = 0;
+    a.volume = Math.min(1, masterVolume * volume);
+    a.play().catch(() => {});
+  } catch (e) {}
+}
+
+function stopApproachSound() {
+  if (approachShotInterval) {
+    clearInterval(approachShotInterval);
+    approachShotInterval = null;
+  }
+}
+
+function startApproachSound(intensity = 0.5) {
+  stopApproachSound();
+  approachShotInterval = setInterval(() => {
+    // Редкие одиночные взрывы на подходе
+    if (Math.random() < 0.35) playExplosion(0.25 * intensity);
+  }, 1200 + Math.random() * 800);
+}
+
+function startBattleSound(intensity = 1) {
+  stopBattleSound();
+  // Интенсивные взрывы/выстрелы каждые 200-400 мс
+  const boomInt = setInterval(() => {
+    playExplosion(0.8 * intensity);
+  }, 200 + Math.random() * 200);
+  battleIntervals = [boomInt];
+}
+
+function stopBattleSound() {
+  battleIntervals.forEach(clearInterval);
+  battleIntervals = [];
+}
+
+// ---- Фоновые лупы (движение войск) ----
+// Тип движения определяем по составу колонны
+function updateMarchLoops() {
+  // Собираем все движущиеся отряды (не бой, не переброска-подкрепление?)
+  // Переброска тоже пусть озвучивается — по составу.
+  const moving = ACTIVE_ATTACKS.filter(a => !a.phase || a.phase === 'moving');
+
+  let hasInfantry = false;
+  let hasTanks = false;
+
+  moving.forEach(atk => {
+    const comp = atk.composition || {};
+    if ((comp.infantry || 0) > 0) hasInfantry = true;
+    if ((comp.tanks || 0) > 0) hasTanks = true;
+    // ПВО/ракеты/дроны тоже «ездят» — считаем как технику (гул)
+    if ((comp.aa || 0) > 0 || (comp.missiles || 0) > 0) hasTanks = true;
+  });
+
+  let newState = 'none';
+  if (hasInfantry && hasTanks) newState = 'mixed';
+  else if (hasTanks) newState = 'engine';
+  else if (hasInfantry) newState = 'footsteps';
+
+  if (newState === currentMarchState) return;
+  currentMarchState = newState;
+
+  // Останавливаем всё, потом включаем нужное
+  if (footstepsLoop) {
+    try { footstepsLoop.pause(); footstepsLoop.currentTime = 0; } catch (e) {}
+    footstepsLoop.volume = 0;
+  }
+  if (engineLoop) {
+    try { engineLoop.pause(); engineLoop.currentTime = 0; } catch (e) {}
+    engineLoop.volume = 0;
+  }
+
+  if (newState === 'footsteps' || newState === 'mixed') {
+    if (footstepsLoop) {
+      footstepsLoop.volume = 0.25;
+      footstepsLoop.play().catch(() => {});
+    }
+  }
+  if (newState === 'engine' || newState === 'mixed') {
+    if (engineLoop) {
+      engineLoop.volume = 0.22;
+      engineLoop.play().catch(() => {});
+    }
+  }
+}
 
 // ============ КОНСТАНТЫ ============
 const FACTIONS = {
@@ -284,10 +277,8 @@ const UNIT_TYPES = {
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
 
-// Рода войск, участвующие в обычной атаке
 const ATTACK_UNITS = ['infantry', 'tanks'];
 
-// РАСХОД РЕСУРСОВ
 const UNIT_COST_PER_ATTACK = {
   infantry: { ammo: 3.0, fuel: 0 },
   tanks:    { ammo: 4.0, fuel: 3.0 },
@@ -1388,6 +1379,10 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     setEventMessage(`🔄 Переброска: ${sendFromCity.name} → ${sendToCity.name}`, 'info');
   } else {
     setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
+    // Редкие отстрелы, если у цели есть гарнизон
+    if (sendToCity.garrison && getGarrisonTotal(sendToCity.garrison) > 0) {
+      startApproachSound(0.5);
+    }
   }
 
   document.getElementById('send-modal').classList.add('hidden');
@@ -1865,6 +1860,8 @@ function updateAttacks(dt) {
         if (remaining === 0) {
           setEventMessage(`💀 Отряд уничтожен на подходе к ${atk.to.name}`, 'danger');
           ACTIVE_ATTACKS.splice(i, 1);
+          stopApproachSound();
+          updateMarchLoops();
           continue;
         }
       }
@@ -1873,17 +1870,35 @@ function updateAttacks(dt) {
         if (atk.type === 'transfer') {
           resolveTransfer(atk.from, atk.to, atk.composition);
           ACTIVE_ATTACKS.splice(i, 1);
+          updateMarchLoops();
         } else {
           atk.phase = 'battle';
           atk.battleProgress = 0;
           atk.battleDuration = calcBattleDuration(atk.composition, atk.to.garrison);
+
+          // Останавливаем фоновые лупы (марш/гул) и запускаем бой
+          stopApproachSound();
+          updateMarchLoops();
+          startBattleSound(0.8);
         }
+      } else {
+        // Обновляем фоновые лупы в зависимости от состава
+        updateMarchLoops();
       }
-    } else if (atk.phase === 'battle') {
+    }
+    else if (atk.phase === 'battle') {
       atk.battleProgress += dt / atk.battleDuration;
       if (atk.battleProgress >= 1) {
-        resolveBattle(atk.from, atk.to, atk.composition);
+        const wasVictory = resolveBattle(atk.from, atk.to, atk.composition);
         ACTIVE_ATTACKS.splice(i, 1);
+
+        const otherBattles = ACTIVE_ATTACKS.filter(a => a.phase === 'battle');
+        if (otherBattles.length === 0) stopBattleSound();
+
+        // Один громкий взрыв при победе (захват)
+        if (wasVictory) playExplosion(1.0);
+
+        updateMarchLoops();
       }
     }
   }
@@ -1921,7 +1936,8 @@ function resolveBattle(fromCity, toCity, composition) {
     if (wasEnemy) {
       const isEnemyCapture = fromCity.owner === state.enemyFaction;
       state.captureEffects.push({
-        x: toCity.x, y: toCity.y,
+        x: toCity.x,
+        y: toCity.y,
         start: performance.now(),
         duration: 1500,
         color: isEnemyCapture ? '#ff3b5c' : '#00ff88',
@@ -1951,13 +1967,12 @@ function resolveBattle(fromCity, toCity, composition) {
 
   if (victory) {
     setEventMessage(`✅ Захвачен ${toCity.name}`, 'success');
-    playSound('explosion', 0.8, 0.7);
   } else {
     setEventMessage(`💀 Потеряли войска под ${toCity.name}`, 'danger');
-    playSound('explosion', 0.6, 0.9);
   }
 
   checkVictory();
+  return victory;
 }
 
 // ============ ДЕНЬ/НОЧЬ ============
@@ -2591,7 +2606,6 @@ function renderAttacks() {
     else if (isOurAttack) color = '#00ff88';
     else color = '#ff9500';
 
-    // ФАЗА БОЯ — рисуем иконку у цели
     if (atk.phase === 'battle') {
       const sx = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
       const sy = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
@@ -2600,7 +2614,6 @@ function renderAttacks() {
       const pulseScale = 1 + Math.sin(now / 200) * 0.15;
       const finalSize = iconSize * pulseScale;
 
-      // Вспышки боя
       for (let i = 0; i < 3; i++) {
         if (Math.random() < 0.4) {
           const angle = Math.random() * Math.PI * 2;
@@ -2619,7 +2632,6 @@ function renderAttacks() {
         }
       }
 
-      // Трассеры
       for (let i = 0; i < 2; i++) {
         if (Math.random() < 0.3) {
           const angle = Math.random() * Math.PI * 2;
@@ -2638,7 +2650,6 @@ function renderAttacks() {
         }
       }
 
-      // Иконка БМП в стороне
       ctx.fillStyle = 'rgba(10, 15, 25, 0.9)';
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
@@ -2660,7 +2671,6 @@ function renderAttacks() {
       return;
     }
 
-    // ФАЗА ДВИЖЕНИЯ
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
     const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
@@ -2690,7 +2700,6 @@ function renderAttacks() {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Размер иконки зависит от остатка войск
     const totalInComposition = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0), 0);
     const originalSize = Math.max(20, 26 * camera.zoom);
     const healthRatio = Math.min(1, totalInComposition / 5);
@@ -2860,6 +2869,9 @@ function startGame() {
   initSituationCanvas();
   window.addEventListener('resize', initSituationCanvas);
   situationPoints = [];
+
+  // Дополнительная гарантия разблокировки аудио на старте игры
+  initAudio();
 
   lastTime = performance.now();
   requestAnimationFrame(loop);
