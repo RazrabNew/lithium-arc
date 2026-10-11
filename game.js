@@ -17,10 +17,10 @@ let footstepsLoop = null;
 let engineLoop = null;
 
 let currentMarchState = 'none';
-let battleIntervals = [];
+let battleSoundAudio = null;
 let approachShotInterval = null;
 
-function makeAudioPool(src, size = 6, volume = masterVolume) {
+function makeAudioPool(src, size = 2, volume = masterVolume) {
   const pool = [];
   for (let i = 0; i < size; i++) {
     const a = new Audio(src);
@@ -35,7 +35,7 @@ function initAudio() {
   if (audioInitialized) return;
   audioInitialized = true;
 
-  explosionPool = makeAudioPool(SOUND_PATHS.explosion, 6);
+  explosionPool = makeAudioPool(SOUND_PATHS.explosion, 2);
 
   footstepsLoop = new Audio(SOUND_PATHS.footsteps);
   footstepsLoop.loop = true;
@@ -44,6 +44,10 @@ function initAudio() {
   engineLoop = new Audio(SOUND_PATHS.engine);
   engineLoop.loop = true;
   engineLoop.volume = 0;
+
+  battleSoundAudio = new Audio(SOUND_PATHS.explosion);
+  battleSoundAudio.loop = false;
+  battleSoundAudio.volume = 0;
 
   const silent = new Audio(SOUND_PATHS.explosion);
   silent.volume = 0;
@@ -56,11 +60,9 @@ document.addEventListener('mousedown', initAudio, { once: true });
 function playExplosion(volume = 1) {
   if (!explosionPool) return;
   let a = explosionPool.find(x => x.paused || x.ended);
-  if (!a) {
-    a = explosionPool[Math.floor(Math.random() * explosionPool.length)];
-    try { a.pause(); a.currentTime = 0; } catch (e) {}
-  }
+  if (!a) a = explosionPool[0];
   try {
+    a.pause();
     a.currentTime = 0;
     a.volume = Math.min(1, masterVolume * volume);
     a.play().catch(() => {});
@@ -68,13 +70,14 @@ function playExplosion(volume = 1) {
 }
 
 function stopAllExplosions() {
-  if (!explosionPool) return;
-  explosionPool.forEach(a => {
-    try {
-      a.pause();
-      a.currentTime = 0;
-    } catch (e) {}
-  });
+  if (explosionPool) {
+    explosionPool.forEach(a => {
+      try { a.pause(); a.currentTime = 0; } catch (e) {}
+    });
+  }
+  if (battleSoundAudio) {
+    try { battleSoundAudio.pause(); battleSoundAudio.currentTime = 0; } catch (e) {}
+  }
 }
 
 function stopApproachSound() {
@@ -88,22 +91,29 @@ function stopApproachSound() {
 function startApproachSound(intensity = 0.5) {
   stopApproachSound();
   approachShotInterval = setInterval(() => {
-    if (Math.random() < 0.35) playExplosion(0.25 * intensity);
+    if (Math.random() < 0.35) {
+      playExplosion(0.25 * intensity);
+    }
   }, 1200 + Math.random() * 800);
 }
 
 function startBattleSound(intensity = 1) {
   stopBattleSound();
-  const boomInt = setInterval(() => {
-    playExplosion(0.8 * intensity);
-  }, 250 + Math.random() * 200);
-  battleIntervals = [boomInt];
+  if (!battleSoundAudio) return;
+  try {
+    battleSoundAudio.currentTime = 0;
+    battleSoundAudio.volume = Math.min(1, masterVolume * intensity);
+    battleSoundAudio.play().catch(() => {});
+  } catch (e) {}
 }
 
 function stopBattleSound() {
-  battleIntervals.forEach(clearInterval);
-  battleIntervals = [];
-  stopAllExplosions();
+  if (battleSoundAudio) {
+    try {
+      battleSoundAudio.pause();
+      battleSoundAudio.currentTime = 0;
+    } catch (e) {}
+  }
 }
 
 function updateMarchLoops() {
@@ -2599,7 +2609,6 @@ function renderAttacks() {
     else if (isOurAttack) color = '#00ff88';
     else color = '#ff9500';
 
-    // Фаза боя: только статичный значок БМП над городом
     if (atk.phase === 'battle') {
       const sx = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
       const sy = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
@@ -2764,8 +2773,6 @@ function renderCities() {
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
-    // ⚠️ Значок ⚔<цифра> убран
-
     if (camera.zoom < 0.6 && c.type !== 'capital' && c.type !== 'large') return;
 
     const fontSize = Math.max(9, (c.type === 'capital' ? 13 : c.type === 'large' ? 12 : c.type === 'medium' ? 11 : 10) * Math.max(0.8, camera.zoom));
@@ -2822,6 +2829,14 @@ function startGame() {
   situationPoints = [];
 
   initAudio();
+
+  // ⚠️ Глушим всё аудио от прошлой сессии
+  stopApproachSound();
+  stopBattleSound();
+  stopAllExplosions();
+  if (footstepsLoop) { try { footstepsLoop.pause(); footstepsLoop.currentTime = 0; } catch(e){} }
+  if (engineLoop)     { try { engineLoop.pause();     engineLoop.currentTime = 0; } catch(e){} }
+  currentMarchState = 'none';
 
   lastTime = performance.now();
   requestAnimationFrame(loop);
