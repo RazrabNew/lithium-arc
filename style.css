@@ -57,7 +57,7 @@ body {
   filter: none;
 }
 
-/* ===== АНИМАЦИИ ПОЯВЛЕНИЯ ===== */
+/* ===== АНИМАЦИИ ===== */
 @keyframes modal-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -250,7 +250,7 @@ body {
   transition: width 0.3s;
 }
 
-/* ===== ПОГОДА — 2 блока по 50% ===== */
+/* ПОГОДА — 2 блока по 50% */
 .weather-row {
   border-bottom: 1px solid var(--border-dim);
   gap: 4px;
@@ -286,7 +286,7 @@ body {
   text-overflow: ellipsis;
 }
 
-/* ===== ЭКГ + Обстановка ===== */
+/* ЭКГ + Обстановка */
 .situation-row {
   display: flex;
   align-items: stretch;
@@ -355,7 +355,7 @@ body {
   animation: ticker-pulse 1.2s infinite;
 }
 
-/* Кнопки скорости / зум / действия */
+/* Кнопки управления */
 .speed-group { display: flex; gap: 4px; }
 
 .speed-btn, #pause-btn, .city-btn, .zoom-btn {
@@ -814,9 +814,22 @@ body {
   padding: 12px; margin: 10px 0;
   background: var(--bg-btn); border-radius: 8px;
   font-size: 12px; color: var(--text-dim); text-align: center;
+  line-height: 1.6;
 }
 
 .send-summary b { color: #fff; }
+
+.send-warning {
+  padding: 10px 12px;
+  margin: 8px 0;
+  background: rgba(255, 59, 92, 0.12);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--red);
+  font-weight: 600;
+  text-align: center;
+}
 
 /* GAME OVER */
 .modal {
@@ -842,15 +855,4 @@ body {
   color: #0a0e1a; border: none; border-radius: 8px;
   font-size: 14px; font-weight: bold; cursor: pointer;
   font-family: inherit;
-}
-.send-warning {
-  padding: 10px 12px;
-  margin: 8px 0;
-  background: rgba(255, 59, 92, 0.12);
-  border: 1px solid var(--red);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--red);
-  font-weight: 600;
-  text-align: center;
 }

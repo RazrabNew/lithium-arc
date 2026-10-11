@@ -56,13 +56,14 @@ const LANG = {
     techEconomyDesc: '+20% дохода за уровень', techCombatDesc: '+12% атаки за уровень',
     techArmorDesc: '+12% обороны за уровень', techLogisticsDesc: '−8% расход, +10% выпуск',
     techAADesc: 'Шанс сбить дроны', techDronesDesc: 'Открывает дроны',
-    techDroneFactoryDesc: '+0.04/с сборка дронов', techMobDesc: 'Открывает призыв',
+    techDroneFactoryDesc: '+15% к производству дронов', techMobDesc: 'Открывает призыв',
     techLifeDesc: '+0.07 к благу/с', techBirthDesc: '+1.2‰ за уровень',
     mobilize: 'Мобилизация · призыв',
     resAmmo: 'Боеприпасы', resWeapons: 'Оружие', resTanks: 'Танки',
     resFuel: 'Топливо', resDrones: 'Дроны',
     bldMine: 'Шахта', bldFactory: 'Завод', bldAmmo: 'Завод боеприпасов',
     bldWeapon: 'Оружейный завод', bldTank: 'Танковый завод', bldOil: 'Нефтяная скважина',
+    bldDroneFactory: 'Завод дронов',
     armyTotal: 'Всего войск:', armyGarrisons: 'В гарнизонах:', armyInField: 'В поле:',
     unitInfantry: 'Пехота', unitTanks: 'Танки', unitAA: 'ПВО',
     unitMissiles: 'Ракеты', unitDrones: 'Дроны',
@@ -101,13 +102,14 @@ const LANG = {
     techEconomyDesc: '+20% income/level', techCombatDesc: '+12% attack/level',
     techArmorDesc: '+12% defense/level', techLogisticsDesc: '−8% cost, +10% output',
     techAADesc: 'Shoot down drones', techDronesDesc: 'Unlock drones',
-    techDroneFactoryDesc: '+0.04/s drone build', techMobDesc: 'Unlock conscription',
+    techDroneFactoryDesc: '+15% drone production', techMobDesc: 'Unlock conscription',
     techLifeDesc: '+0.07 welfare/s', techBirthDesc: '+1.2‰/level',
     mobilize: 'Mobilization',
     resAmmo: 'Ammo', resWeapons: 'Weapons', resTanks: 'Tanks',
     resFuel: 'Fuel', resDrones: 'Drones',
     bldMine: 'Mine', bldFactory: 'Factory', bldAmmo: 'Ammo factory',
     bldWeapon: 'Weapon factory', bldTank: 'Tank factory', bldOil: 'Oil well',
+    bldDroneFactory: 'Drone factory',
     armyTotal: 'Total troops:', armyGarrisons: 'In garrisons:', armyInField: 'In field:',
     unitInfantry: 'Infantry', unitTanks: 'Tanks', unitAA: 'Air defense',
     unitMissiles: 'Missiles', unitDrones: 'Drones',
@@ -120,7 +122,7 @@ const UNIT_TYPES = {
   tanks:    { icon: 'tank.svg', ru: 'Танки', en: 'Tanks', cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
   aa:       { icon: 'anti-aircraft.svg', ru: 'ПВО', en: 'Air defense', cost: { weapons: 8, fuel: 3, money: 120 }, power: 1.5 },
   missiles: { icon: 'missile.svg', ru: 'Ракеты', en: 'Missiles', cost: { weapons: 15, fuel: 5, money: 250 }, power: 5.0 },
-  drones:   { icon: 'drone.svg', ru: 'Дроны', en: 'Drones', cost: { drones: 1, money: 60 }, power: 0.8 },
+  drones:   { icon: 'drone.svg', ru: 'Дроны', en: 'Drones', cost: { money: 80 }, power: 0.8 },
 };
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
@@ -129,7 +131,7 @@ const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
 const UNIT_COST_PER_ATTACK = {
   infantry: { ammo: 3.0, fuel: 0 },
   tanks:    { ammo: 4.0, fuel: 3.0 },
-  aa:       { ammo: 6.0, fuel: 2.5 },
+  aa:       { ammo: 6.0, fuel: 2.5 },  // не используется (ПВО не атакует), но пусть будет
   missiles: { ammo: 10.0, fuel: 4.0 },
   drones:   { ammo: 2.0, fuel: 1.5 },
 };
@@ -145,6 +147,7 @@ const UNIT_COST_PER_TRANSFER = {
 function calcAttackCost(composition) {
   let ammo = 0, fuel = 0;
   UNIT_ORDER.forEach(k => {
+    if (k === 'aa') return; // ПВО не атакует
     const count = composition[k] || 0;
     if (count === 0) return;
     const cost = UNIT_COST_PER_ATTACK[k];
@@ -240,6 +243,7 @@ const state = {
   statusOverride: null,
   statusOverrideUntil: 0,
   warnedAboutAttack: false,
+  captureEffects: [],
 };
 
 const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
@@ -287,6 +291,7 @@ const BUILDINGS_CFG = {
   weaponFactory: { ru: 'Оружейный завод', en: 'Weapon factory', cost: 1360, icon: 'sword.svg' },
   tankFactory: { ru: 'Танковый завод', en: 'Tank factory', cost: 1200, icon: 'tank.svg' },
   oilWell: { ru: 'Нефтяная скважина', en: 'Oil well', cost: 1105, icon: 'oil-pump.svg' },
+  droneFactory: { ru: 'Завод дронов', en: 'Drone factory', cost: 1250, icon: 'drone.svg' },
 };
 const FORTIFICATIONS = [
   { level: 0, icon: 'buildings.svg', ru: 'Открытый', en: 'Open', cost: 0 },
@@ -407,13 +412,13 @@ function generateCities() {
     x: 3, y: 3, type: 'capital', owner: 'aurora', name: 'Аврора',
     baseIncome: 1.5, basePop: 5, infrastructure: 100,
     garrison: makeStartingGarrison(), fortification: 2,
-    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
+    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0, droneFactory: 0 },
   });
   CITIES.push({
     x: MAP.W - 4, y: MAP.H - 4, type: 'capital', owner: 'vesper', name: 'Веспер',
     baseIncome: 1.5, basePop: 5, infrastructure: 100,
     garrison: makeStartingGarrison(), fortification: 2,
-    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
+    buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0, droneFactory: 0 },
   });
 
   const auroraZone = { xMin: 2, xMax: 16, yMin: 2, yMax: MAP.H - 3 };
@@ -449,7 +454,7 @@ function generateCities() {
           baseIncome, basePop: 1, garrison: g,
           infrastructure: 60 + Math.floor(rand() * 30),
           fortification: 0,
-          buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 },
+          buildings: { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0, droneFactory: 0 },
         });
         placed++;
       }
@@ -1103,6 +1108,9 @@ function openSendCompositionModal(fromCity, toCity) {
   const update = () => {
     body.innerHTML = '';
     UNIT_ORDER.forEach(key => {
+      // ПВО не участвует в атаках
+      if (key === 'aa') return;
+
       const available = fromCity.garrison[key] || 0;
       if (available === 0) return;
       const current = sendComposition[key] || 0;
@@ -1122,6 +1130,9 @@ function openSendCompositionModal(fromCity, toCity) {
       `;
       body.appendChild(row);
     });
+
+    // Обнуляем ПВО в составе (нельзя атаковать)
+    sendComposition.aa = 0;
 
     const totalUnits = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0), 0);
     const totalPower = UNIT_ORDER.reduce((s, k) => s + (sendComposition[k] || 0) * UNIT_TYPES[k].power, 0);
@@ -1470,15 +1481,25 @@ function updateLogisticsPanel() {
 
 // ============ ПРОИЗВОДСТВО ============
 function calcResourceProduction() {
-  let ammo = 0, weapons = 0, tanks = 0, fuel = 0;
+  let ammo = 0, weapons = 0, tanks = 0, fuel = 0, drones = 0;
+  let myCitiesCount = 0;
+  let droneFactoryCount = 0;
+
   CITIES.forEach(c => {
     if (c.owner !== state.faction) return;
+    myCitiesCount++;
     ammo += (c.buildings?.ammoFactory || 0) * 1.2;
     weapons += (c.buildings?.weaponFactory || 0) * 0.6;
     tanks += (c.buildings?.tankFactory || 0) * 0.15;
     fuel += (c.buildings?.oilWell || 0) * 1.0;
+    droneFactoryCount += (c.buildings?.droneFactory || 0);
   });
-  return { ammo, weapons, tanks, fuel };
+
+  // Дроны: базовое (0.02 × город) + от заводов (0.04 × завод)
+  const droneTechMult = 1 + state.tech.dronefactory * 0.15;
+  drones = (myCitiesCount * 0.02 + droneFactoryCount * 0.04) * droneTechMult;
+
+  return { ammo, weapons, tanks, fuel, drones };
 }
 document.getElementById('buy-ammo-btn').addEventListener('click', () => {
   if (state.money < 120 || state.resources.ammo >= RESOURCE_MAX.ammo) return;
@@ -1520,10 +1541,9 @@ function updateProductionPanel() {
   document.getElementById('res-fuel-prod').textContent = `производство +${prod.fuel.toFixed(2)}/с`;
   document.getElementById('buy-fuel-btn').disabled = state.money < 160 || r.fuel >= RESOURCE_MAX.fuel;
   document.getElementById('res-drones-count').textContent = `${Math.floor(r.drones)}/${RESOURCE_MAX.drones}`;
-  const droneBuild = state.tech.dronefactory * 0.04;
-  document.getElementById('res-drones-prod').textContent = `производство +${droneBuild.toFixed(2)}/с`;
+  document.getElementById('res-drones-prod').textContent = `производство +${prod.drones.toFixed(2)}/с`;
 
-  const totals = { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0 };
+  const totals = { mine: 0, factory: 0, ammoFactory: 0, weaponFactory: 0, tankFactory: 0, oilWell: 0, droneFactory: 0 };
   CITIES.forEach(c => {
     if (c.owner !== state.faction) return;
     Object.keys(totals).forEach(k => totals[k] += (c.buildings?.[k] || 0));
@@ -1534,6 +1554,7 @@ function updateProductionPanel() {
   document.getElementById('bld-weapon-total').textContent = totals.weaponFactory;
   document.getElementById('bld-tank-total').textContent = totals.tankFactory;
   document.getElementById('bld-oil-total').textContent = totals.oilWell;
+  document.getElementById('bld-dronefactory-total').textContent = totals.droneFactory;
 }
 
 // ============ АРМИЯ ============
@@ -1640,7 +1661,12 @@ function resolveBattle(fromCity, toCity, composition) {
   const combatBonus = 1 + state.tech.combat * 0.12;
   const armorBonus = 1 + state.tech.armor * 0.12;
   const defenseMult = getDefenseMultiplier(toCity);
-  const attackPower = UNIT_ORDER.reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
+
+  // ПВО не даёт атакующей силы
+  const attackPower = UNIT_ORDER
+    .filter(k => k !== 'aa')
+    .reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
+
   const defensePower = UNIT_ORDER.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
   const victory = attackPower > defensePower;
   const attackerLosses = {}, defenderLosses = {}, survivors = { ...attackerGarrison };
@@ -1655,10 +1681,24 @@ function resolveBattle(fromCity, toCity, composition) {
       survivors[k] = count - lost;
     });
     UNIT_ORDER.forEach(k => { defenderLosses[k] = Math.ceil((defenderGarrison[k] || 0) * 0.85); });
+
+    const wasEnemy = toCity.owner !== state.faction;
     toCity.owner = state.faction;
     toCity.garrison = { ...survivors };
     toCity.fortification = Math.max(0, toCity.fortification - 1);
     state.welfare -= 5;
+
+    // Эффект захвата
+    if (wasEnemy) {
+      const isEnemyCapture = fromCity.owner === state.enemyFaction;
+      state.captureEffects.push({
+        x: toCity.x,
+        y: toCity.y,
+        start: performance.now(),
+        duration: 1500,
+        color: isEnemyCapture ? '#ff3b5c' : '#00ff88',
+      });
+    }
   } else {
     const ratio = attackPower / Math.max(0.01, defensePower);
     const lossRatio = Math.min(1, ratio * 0.9);
@@ -1915,8 +1955,9 @@ function update(dt) {
   state.resources.weapons = Math.min(RESOURCE_MAX.weapons, state.resources.weapons + prod.weapons * dt);
   state.resources.tanks = Math.min(RESOURCE_MAX.tanks, state.resources.tanks + prod.tanks * dt);
   state.resources.fuel = Math.min(RESOURCE_MAX.fuel, Math.max(0, state.resources.fuel + (prod.fuel - 0.40) * dt));
-  const droneBuild = state.tech.dronefactory * 0.04;
-  state.resources.drones = Math.min(RESOURCE_MAX.drones, state.resources.drones + droneBuild * dt);
+
+  // Дроны — от calcResourceProduction (базовое + заводы × технология)
+  state.resources.drones = Math.min(RESOURCE_MAX.drones, state.resources.drones + prod.drones * dt);
 
   const birthRate = 8.0 + state.tech.birth * 1.2;
   const health = state.services.health;
@@ -2070,6 +2111,7 @@ function renderMap() {
   renderRoads();
   renderAttacks();
   renderCities();
+  renderCaptureEffects();
   renderWeather();
 
   const darkness = getDarknessAlpha();
@@ -2079,6 +2121,61 @@ function renderMap() {
   }
 
   renderVignette(w, h);
+}
+
+function renderCaptureEffects() {
+  const tileSize = MAP.TILE * camera.zoom;
+  const now = performance.now();
+
+  for (let i = state.captureEffects.length - 1; i >= 0; i--) {
+    const fx = state.captureEffects[i];
+    const elapsed = now - fx.start;
+    const progress = elapsed / fx.duration;
+
+    if (progress >= 1) {
+      state.captureEffects.splice(i, 1);
+      continue;
+    }
+
+    const sx = (fx.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
+    const sy = (fx.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+
+    const maxRadius = 60 * camera.zoom;
+    const radius = maxRadius * progress;
+    const alpha = (1 - progress) * 0.8;
+
+    ctx.strokeStyle = fx.color;
+    ctx.lineWidth = 3 * camera.zoom * (1 - progress * 0.5);
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = fx.color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (progress > 0.2) {
+      const p2 = (progress - 0.2) / 0.8;
+      const r2 = maxRadius * 0.7 * p2;
+      const a2 = (1 - p2) * 0.5;
+      ctx.globalAlpha = a2;
+      ctx.lineWidth = 2 * camera.zoom;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (progress < 0.3) {
+      const flashAlpha = (1 - progress / 0.3) * 0.6;
+      ctx.globalAlpha = flashAlpha;
+      ctx.fillStyle = fx.color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 30 * camera.zoom * (1 - progress / 0.3), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
 }
 
 function renderGrid(w, h) {
