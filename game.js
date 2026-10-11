@@ -3,125 +3,162 @@ const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
 // ============ AUDIO ============
+const soundBuffers = {
+  footsteps: null,
+  engine: null,
+  explosion: null,
+};
+
 let audioCtx = null;
 let audioInitialized = false;
+
+let footstepsLoop = null;
+let engineLoop = null;
 
 function initAudio() {
   if (audioInitialized) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     audioInitialized = true;
+    loadAllSounds();
   } catch (e) {
     console.warn('AudioContext не поддерживается', e);
   }
 }
-document.addEventListener('touchstart', initAudio, { once: true });
-document.addEventListener('mousedown', initAudio, { once: true });
 
-function playShot(targetGain, intensity) {
-  if (!audioCtx || audioCtx.state === 'closed') return;
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+async function loadAllSounds() {
+  if (!audioCtx) return;
+  const files = {
+    footsteps: 'sounds/footsteps_marching.wav',
+    engine: 'sounds/tank_engine.wav',
+    explosion: 'sounds/explosion.wav',
+  };
 
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(400 + Math.random() * 200, now);
-  osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
-
-  gain.gain.setValueAtTime(0.3 * intensity, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-  osc.connect(gain);
-  gain.connect(targetGain);
-
-  osc.start(now);
-  osc.stop(now + 0.1);
+  for (const [key, url] of Object.entries(files)) {
+    try {
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      soundBuffers[key] = await audioCtx.decodeAudioData(arrayBuffer);
+      console.log(`✅ Загружен звук: ${key}`);
+    } catch (e) {
+      console.warn(`⚠️ Не удалось загрузить звук ${key}:`, e);
+    }
+  }
 }
 
-function playExplosion(targetGain, intensity) {
-  if (!audioCtx || audioCtx.state === 'closed') return;
-  const now = audioCtx.currentTime;
-  const noise = audioCtx.createBufferSource();
-  const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
+function playSound(name, volume = 1, rate = 1) {
+  if (!audioCtx || !soundBuffers[name]) return;
+  try {
+    const source = audioCtx.createBufferSource();
+    source.buffer = soundBuffers[name];
+    source.playbackRate.value = rate;
 
-  for (let i = 0; i < data.length; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+    const gain = audioCtx.createGain();
+    gain.gain.value = volume;
+
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    source.start(0);
+  } catch (e) {
+    console.warn('Ошибка воспроизведения', e);
+  }
+}
+
+function startLoop(name, volume = 0.3) {
+  if (!audioCtx || !soundBuffers[name]) return null;
+  try {
+    const source = audioCtx.createBufferSource();
+    source.buffer = soundBuffers[name];
+    source.loop = true;
+
+    const gain = audioCtx.createGain();
+    gain.gain.value = volume;
+
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    source.start(0);
+    return { source, gain };
+  } catch (e) {
+    console.warn('Ошибка запуска лупа', e);
+    return null;
+  }
+}
+
+function stopLoop(loop) {
+  if (!loop) return;
+  try {
+    loop.source.stop();
+    loop.gain.disconnect();
+  } catch (e) {}
+}
+
+// ==== Управление звуками атак ====
+let currentSoundType = null;
+let lastSoundUpdate = 0;
+
+function updateAttackSounds() {
+  if (!audioCtx || audioCtx.state === 'suspended') return;
+
+  let infantryAttacks = 0;
+  let vehicleAttacks = 0;
+  let battles = 0;
+
+  ACTIVE_ATTACKS.forEach(atk => {
+    if (atk.from.owner !== state.faction) return;
+    if (atk.type === 'transfer') return;
+
+    const comp = atk.composition;
+    if (atk.phase === 'battle') {
+      battles++;
+    } else {
+      if ((comp.infantry || 0) > 0) infantryAttacks++;
+      if ((comp.tanks || 0) > 0) vehicleAttacks++;
+    }
+  });
+
+  // Если идёт бой — играем взрывы
+  if (battles > 0) {
+    stopLoop(footstepsLoop); footstepsLoop = null;
+    stopLoop(engineLoop); engineLoop = null;
+
+    if (Math.random() < 0.4) {
+      playSound('explosion', 0.35 + Math.random() * 0.3, 0.8 + Math.random() * 0.6);
+    }
+    currentSoundType = 'battle';
+    return;
   }
 
-  noise.buffer = buffer;
+  // Идёт марш
+  let newType = null;
+  if (infantryAttacks > 0 && vehicleAttacks > 0) newType = 'mixed';
+  else if (infantryAttacks > 0) newType = 'infantry';
+  else if (vehicleAttacks > 0) newType = 'vehicles';
 
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 200;
+  if (newType !== currentSoundType) {
+    stopLoop(footstepsLoop); footstepsLoop = null;
+    stopLoop(engineLoop); engineLoop = null;
 
-  const gain = audioCtx.createGain();
-  gain.gain.value = 0.4 * intensity;
+    if (newType === 'infantry' || newType === 'mixed') {
+      footstepsLoop = startLoop('footsteps', 0.25);
+    }
+    if (newType === 'vehicles' || newType === 'mixed') {
+      engineLoop = startLoop('engine', 0.20);
+    }
+    currentSoundType = newType;
+  }
 
-  noise.connect(filter);
-  filter.connect(gain);
-  gain.connect(targetGain);
-
-  noise.start(now);
+  // Отстрел на подходе (редкие одиночные взрывы)
+  if (infantryAttacks > 0 || vehicleAttacks > 0) {
+    if (Math.random() < 0.06) {
+      playSound('explosion', 0.12 + Math.random() * 0.15, 1.2 + Math.random() * 0.6);
+    }
+  }
 }
 
-// Звук подхода (отстрел по колонне)
-let approachSoundNodes = null;
-
-function startApproachSound(intensity = 0.6) {
-  if (!audioCtx) return;
-  stopApproachSound();
-
-  const masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.08 * intensity;
-  masterGain.connect(audioCtx.destination);
-
-  const interval = setInterval(() => {
-    if (!audioCtx || audioCtx.state === 'closed') return;
-    if (Math.random() < 0.5) playShot(masterGain, 0.5);
-  }, 300 + Math.random() * 200);
-
-  approachSoundNodes = { masterGain, interval };
-}
-
-function stopApproachSound() {
-  if (!approachSoundNodes) return;
-  clearInterval(approachSoundNodes.interval);
-  try { approachSoundNodes.masterGain.disconnect(); } catch (e) {}
-  approachSoundNodes = null;
-}
-
-// Звук боя
-let battleSoundNodes = null;
-
-function startBattleSound(intensity = 1) {
-  if (!audioCtx) return;
-  stopBattleSound();
-
-  const masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.15 * intensity;
-  masterGain.connect(audioCtx.destination);
-
-  const interval = setInterval(() => {
-    if (!audioCtx || audioCtx.state === 'closed') return;
-    playShot(masterGain, intensity);
-  }, 120 + Math.random() * 80);
-
-  const explodeInterval = setInterval(() => {
-    if (!audioCtx || audioCtx.state === 'closed') return;
-    if (Math.random() < 0.3) playExplosion(masterGain, intensity);
-  }, 800);
-
-  battleSoundNodes = { masterGain, interval, explodeInterval };
-}
-
-function stopBattleSound() {
-  if (!battleSoundNodes) return;
-  clearInterval(battleSoundNodes.interval);
-  clearInterval(battleSoundNodes.explodeInterval);
-  try { battleSoundNodes.masterGain.disconnect(); } catch (e) {}
-  battleSoundNodes = null;
-}
+document.addEventListener('touchstart', initAudio, { once: true });
+document.addEventListener('mousedown', initAudio, { once: true });
 
 // ============ КОНСТАНТЫ ============
 const FACTIONS = {
@@ -1351,10 +1388,6 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     setEventMessage(`🔄 Переброска: ${sendFromCity.name} → ${sendToCity.name}`, 'info');
   } else {
     setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
-    // Запускаем звук отстрела если у цели есть гарнизон
-    if (sendToCity.garrison && getGarrisonTotal(sendToCity.garrison) > 0) {
-      startApproachSound(0.6);
-    }
   }
 
   document.getElementById('send-modal').classList.add('hidden');
@@ -1803,7 +1836,6 @@ function applyApproachCasualties(atk, dt) {
       atk.composition[unitType] = available - kill;
       accumulated -= kill * unitPower;
 
-      // Эффект потерь на пути
       const t = atk.progress;
       const wx = atk.from.x + (atk.to.x - atk.from.x) * t;
       const wy = atk.from.y + (atk.to.y - atk.from.y) * t;
@@ -1823,11 +1855,9 @@ function updateAttacks(dt) {
   for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
     const atk = ACTIVE_ATTACKS[i];
 
-    // Фаза движения
     if (!atk.phase || atk.phase === 'moving') {
       atk.progress += atk.speed * dt;
 
-      // Отстрел при подходе
       if (atk.type !== 'transfer') {
         applyApproachCasualties(atk, dt);
 
@@ -1835,9 +1865,6 @@ function updateAttacks(dt) {
         if (remaining === 0) {
           setEventMessage(`💀 Отряд уничтожен на подходе к ${atk.to.name}`, 'danger');
           ACTIVE_ATTACKS.splice(i, 1);
-
-          const movingAttacks = ACTIVE_ATTACKS.filter(a => a.phase === 'moving' || !a.phase);
-          if (movingAttacks.length === 0) stopApproachSound();
           continue;
         }
       }
@@ -1847,27 +1874,16 @@ function updateAttacks(dt) {
           resolveTransfer(atk.from, atk.to, atk.composition);
           ACTIVE_ATTACKS.splice(i, 1);
         } else {
-          // Начало боя
           atk.phase = 'battle';
           atk.battleProgress = 0;
           atk.battleDuration = calcBattleDuration(atk.composition, atk.to.garrison);
-
-          // Переключение звука
-          const movingAttacks = ACTIVE_ATTACKS.filter(a => a.phase === 'moving' || !a.phase);
-          if (movingAttacks.length === 0) stopApproachSound();
-          startBattleSound(0.8);
         }
       }
-    }
-    // Фаза боя
-    else if (atk.phase === 'battle') {
+    } else if (atk.phase === 'battle') {
       atk.battleProgress += dt / atk.battleDuration;
       if (atk.battleProgress >= 1) {
         resolveBattle(atk.from, atk.to, atk.composition);
         ACTIVE_ATTACKS.splice(i, 1);
-
-        const otherBattles = ACTIVE_ATTACKS.filter(a => a.phase === 'battle');
-        if (otherBattles.length === 0) stopBattleSound();
       }
     }
   }
@@ -1905,8 +1921,7 @@ function resolveBattle(fromCity, toCity, composition) {
     if (wasEnemy) {
       const isEnemyCapture = fromCity.owner === state.enemyFaction;
       state.captureEffects.push({
-        x: toCity.x,
-        y: toCity.y,
+        x: toCity.x, y: toCity.y,
         start: performance.now(),
         duration: 1500,
         color: isEnemyCapture ? '#ff3b5c' : '#00ff88',
@@ -1936,8 +1951,10 @@ function resolveBattle(fromCity, toCity, composition) {
 
   if (victory) {
     setEventMessage(`✅ Захвачен ${toCity.name}`, 'success');
+    playSound('explosion', 0.8, 0.7);
   } else {
     setEventMessage(`💀 Потеряли войска под ${toCity.name}`, 'danger');
+    playSound('explosion', 0.6, 0.9);
   }
 
   checkVictory();
