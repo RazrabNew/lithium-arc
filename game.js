@@ -114,15 +114,7 @@ const LANG = {
   },
 };
 
-// SVG-пути для родов войск
-const UNIT_SVG = {
-  infantry: 'icons/soldier.svg',
-  tanks:    'icons/tank.svg',
-  aa:       'icons/anti-aircraft.svg',
-  missiles: 'icons/missile.svg',
-  drones:   'icons/drone.svg',
-};
-
+// UNIT TYPES
 const UNIT_TYPES = {
   infantry: { icon: 'soldier.svg', ru: 'Пехота', en: 'Infantry', cost: { weapons: 5, fuel: 0.5, money: 30 }, power: 1.0 },
   tanks:    { icon: 'tank.svg', ru: 'Танки', en: 'Tanks', cost: { tanks: 1, fuel: 2, money: 80 }, power: 3.0 },
@@ -193,6 +185,10 @@ const state = {
   weather: 'clear', weatherTimer: 90, weatherDuration: 90,
   globalTime: 0, lastAttackTime: -999,
   dayTime: 0.2,
+  gameDay: 1,
+  lastEventText: '',
+  lastEventType: 'info',
+  lastEventTime: -999,
 };
 
 const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
@@ -250,11 +246,6 @@ const FORTIFICATIONS = [
 ];
 const MAX_BUILDINGS = 8;
 
-// Хелпер: получить HTML-строку с SVG-иконкой
-function svgIcon(file, colorClass = 'icon-cyan', extraClass = 'svg-icon-inline') {
-  return `<img class="${extraClass} ${colorClass}" src="icons/${file}" alt="">`;
-}
-
 // ============ NOISE ============
 function initNoise() {
   if (typeof SimplexNoise !== 'undefined') noiseGen = new SimplexNoise();
@@ -290,6 +281,17 @@ function getTerrainColor(x, y, owner) {
   const grain = n3 * 4;
   r += grain; g += grain; b += grain;
   return `rgb(${Math.max(0, Math.min(255, r|0))},${Math.max(0, Math.min(255, g|0))},${Math.max(0, Math.min(255, b|0))})`;
+}
+
+// ============ EVENT MESSAGE ============
+function setEventMessage(text, type = 'info') {
+  state.lastEventText = text;
+  state.lastEventType = type;
+  const el = document.getElementById('event-ticker');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('warning', 'danger', 'success');
+  if (type !== 'info') el.classList.add(type);
 }
 
 // ============ МЕНЮ ============
@@ -500,6 +502,7 @@ function generateOverlayCanvas() {
   const delaunay = d3.Delaunay.from(points);
   const voronoi = delaunay.voronoi([0, 0, WORLD_W, WORLD_H]);
 
+  // Регионы — градиент
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
@@ -521,19 +524,41 @@ function generateOverlayCanvas() {
     octx.fill();
   });
 
-  octx.setLineDash([8, 6]);
+  // Волнистые границы регионов
   octx.strokeStyle = 'rgba(15, 20, 30, 0.9)';
   octx.lineWidth = 1.5;
+
   CITIES.forEach((city, i) => {
     const polygon = voronoi.cellPolygon(i);
     if (!polygon) return;
+
     octx.beginPath();
-    polygon.forEach(([x, y], j) => j === 0 ? octx.moveTo(x, y) : octx.lineTo(x, y));
+    for (let k = 0; k < polygon.length; k++) {
+      const p1 = polygon[k];
+      const p2 = polygon[(k + 1) % polygon.length];
+
+      const steps = 4;
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        const x = p1[0] + (p2[0] - p1[0]) * t;
+        const y = p1[1] + (p2[1] - p1[1]) * t;
+        const dx = p2[0] - p1[0];
+        const dy = p2[1] - p1[1];
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+        const wobble = noiseGen.noise2D(x * 0.05, y * 0.05) * 3;
+        const fx = x + nx * wobble;
+        const fy = y + ny * wobble;
+        if (k === 0 && s === 0) octx.moveTo(fx, fy);
+        else octx.lineTo(fx, fy);
+      }
+    }
     octx.closePath();
     octx.stroke();
   });
-  octx.setLineDash([]);
 
+  // Границы фракций
   for (let i = 0; i < CITIES.length; i++) {
     for (const j of voronoi.neighbors(i)) {
       if (i >= j) continue;
@@ -749,13 +774,13 @@ function openCityPanel(city) {
   const g = city.garrison || makeEmptyGarrison();
   const gTotal = getGarrisonTotal(g);
   const gStr = UNIT_ORDER.filter(k => g[k] > 0)
-    .map(k => `<img class="svg-icon-inline icon-cyan" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}`)
+    .map(k => `<img class="svg-icon-inline" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}`)
     .join(' ') || '—';
   document.getElementById('city-garrison').innerHTML = `${gTotal} (${gStr})`;
   document.getElementById('city-infra').textContent = city.infrastructure + '%';
   const fort = getFortification(city);
   document.getElementById('city-defense').innerHTML =
-    `<img class="svg-icon-inline icon-blue" src="icons/${fort.icon}" alt=""> ${lang === 'ru' ? fort.ru : fort.en}`;
+    `<img class="svg-icon-inline" src="icons/${fort.icon}" alt=""> ${lang === 'ru' ? fort.ru : fort.en}`;
   const isOwn = city.owner === state.faction;
   const income = isOwn ? city.baseIncome * (city.infrastructure / 100) * (state.welfare / 100) : 0;
   document.getElementById('city-income').textContent = isOwn ? '+' + income.toFixed(2) + '/с' : '—';
@@ -764,7 +789,7 @@ function openCityPanel(city) {
   document.getElementById('city-buildings').textContent = totalBuildings > 0 ? totalBuildings : '—';
   const isStrategic = totalBuildings >= 5;
   document.getElementById('city-strategic').innerHTML = isStrategic
-    ? `<img class="svg-icon-inline icon-red" src="icons/Warning.svg" alt=""> Да`
+    ? `<img class="svg-icon-inline" src="icons/Warning.svg" alt=""> Да`
     : 'Нет';
   document.getElementById('city-strategic').style.color = isStrategic ? '#ff3b5c' : '';
 
@@ -782,7 +807,7 @@ function openCityPanel(city) {
     const nextFort = FORTIFICATIONS[(city.fortification || 0) + 1];
     if (nextFort) {
       fortifyBtn.innerHTML =
-        `<img class="svg-icon icon-blue" src="icons/${nextFort.icon}" alt=""><span>${lang === 'ru' ? nextFort.ru : nextFort.en} (${nextFort.cost})</span>`;
+        `<img class="svg-icon" src="icons/${nextFort.icon}" alt=""><span>${lang === 'ru' ? nextFort.ru : nextFort.en} (${nextFort.cost})</span>`;
       fortifyBtn.disabled = state.money < nextFort.cost;
       fortifyBtn.style.display = 'flex';
       fortifyBtn.onclick = () => fortifyCity(city);
@@ -913,7 +938,7 @@ function openSendCompositionModal(fromCity, toCity) {
       row.className = 'send-row';
       row.innerHTML = `
         <div class="send-row-name">
-          <img class="svg-icon-inline icon-cyan" src="icons/${ut.icon}" alt="">
+          <img class="svg-icon-inline" src="icons/${ut.icon}" alt="">
           ${lang === 'ru' ? ut.ru : ut.en} (${available})
         </div>
         <div class="send-row-controls">
@@ -965,6 +990,7 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     speed: 0.3 * weather.speedMult * dayEff.speedMult,
   });
   state.lastAttackTime = state.globalTime;
+  setEventMessage(`⚔️ Войска отправлены: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
   document.getElementById('send-modal').classList.add('hidden');
   closeCityPanel();
   sendFromCity = null; sendToCity = null; sendComposition = null;
@@ -982,28 +1008,28 @@ function openHireModal(city) {
   title.textContent = `${lang === 'ru' ? 'Найм' : 'Hire'} · ${city.name}`;
   body.innerHTML = '';
   res.innerHTML = `
-    <span><img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <b>${Math.floor(state.money)}</b></span>
-    <span><img class="svg-icon-inline icon-cyan" src="icons/sword.svg" alt=""> <b>${Math.floor(state.resources.weapons)}</b></span>
-    <span><img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> <b>${Math.floor(state.resources.tanks)}</b></span>
-    <span><img class="svg-icon-inline icon-gold" src="icons/oil-barrel.svg" alt=""> <b>${Math.floor(state.resources.fuel)}</b></span>
-    <span><img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> <b>${Math.floor(state.resources.drones)}</b></span>
+    <span><img class="svg-icon-inline" src="icons/coins.svg" alt=""> <b>${Math.floor(state.money)}</b></span>
+    <span><img class="svg-icon-inline" src="icons/sword.svg" alt=""> <b>${Math.floor(state.resources.weapons)}</b></span>
+    <span><img class="svg-icon-inline" src="icons/tank.svg" alt=""> <b>${Math.floor(state.resources.tanks)}</b></span>
+    <span><img class="svg-icon-inline" src="icons/oil-barrel.svg" alt=""> <b>${Math.floor(state.resources.fuel)}</b></span>
+    <span><img class="svg-icon-inline" src="icons/drone.svg" alt=""> <b>${Math.floor(state.resources.drones)}</b></span>
   `;
   UNIT_ORDER.forEach(key => {
     const ut = UNIT_TYPES[key];
     const count = city.garrison[key] || 0;
     const cost = ut.cost;
     const costStr = [
-      cost.weapons ? `<img class="svg-icon-inline icon-cyan" src="icons/sword.svg" alt=""> ${cost.weapons}` : '',
-      cost.tanks ? `<img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> ${cost.tanks}` : '',
-      cost.fuel ? `<img class="svg-icon-inline icon-gold" src="icons/oil-barrel.svg" alt=""> ${cost.fuel}` : '',
-      cost.drones ? `<img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> ${cost.drones}` : '',
-      cost.money ? `<img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> ${cost.money}` : '',
+      cost.weapons ? `<img class="svg-icon-inline" src="icons/sword.svg" alt=""> ${cost.weapons}` : '',
+      cost.tanks ? `<img class="svg-icon-inline" src="icons/tank.svg" alt=""> ${cost.tanks}` : '',
+      cost.fuel ? `<img class="svg-icon-inline" src="icons/oil-barrel.svg" alt=""> ${cost.fuel}` : '',
+      cost.drones ? `<img class="svg-icon-inline" src="icons/drone.svg" alt=""> ${cost.drones}` : '',
+      cost.money ? `<img class="svg-icon-inline" src="icons/coins.svg" alt=""> ${cost.money}` : '',
     ].filter(Boolean).join(' + ');
     const row = document.createElement('div');
     row.className = 'hire-row';
     row.innerHTML = `
       <div class="hire-row-info">
-        <div class="hire-row-name"><img class="svg-icon-inline icon-cyan" src="icons/${ut.icon}" alt=""> ${lang === 'ru' ? ut.ru : ut.en}</div>
+        <div class="hire-row-name"><img class="svg-icon-inline" src="icons/${ut.icon}" alt=""> ${lang === 'ru' ? ut.ru : ut.en}</div>
         <div class="hire-row-count">В гарнизоне: ${count}</div>
         <div class="hire-row-cost">${costStr}</div>
       </div>
@@ -1187,6 +1213,7 @@ document.getElementById('mobilize-btn').addEventListener('click', () => {
   });
   state.welfare = Math.max(0, state.welfare - 5);
   state.mobilizeCooldown = 90;
+  setEventMessage(`📣 Мобилизация проведена`, 'warning');
   updateLogisticsPanel();
 });
 function updateLogisticsPanel() {
@@ -1204,9 +1231,10 @@ function updateLogisticsPanel() {
     }
   });
   const mobBtn = document.getElementById('mobilize-btn');
-  if (state.tech.mobilization < 1) { mobBtn.disabled = true; mobBtn.querySelector('span').textContent = 'Мобилизация недоступна'; }
-  else if (state.mobilizeCooldown > 0) { mobBtn.disabled = true; mobBtn.querySelector('span').textContent = `Перезарядка ${Math.ceil(state.mobilizeCooldown)}с`; }
-  else { mobBtn.disabled = false; mobBtn.querySelector('span').textContent = 'Мобилизация · призыв'; }
+  const mobSpan = mobBtn.querySelector('span');
+  if (state.tech.mobilization < 1) { mobBtn.disabled = true; mobSpan.textContent = 'Мобилизация недоступна'; }
+  else if (state.mobilizeCooldown > 0) { mobBtn.disabled = true; mobSpan.textContent = `Перезарядка ${Math.ceil(state.mobilizeCooldown)}с`; }
+  else { mobBtn.disabled = false; mobSpan.textContent = 'Мобилизация · призыв'; }
 }
 
 // ============ ПРОИЗВОДСТВО ============
@@ -1331,11 +1359,11 @@ function openBuildModal(city) {
     row.className = 'build-row';
     row.innerHTML = `
       <div class="build-info">
-        <div class="build-name"><img class="svg-icon-inline icon-gold" src="icons/${b.icon}" alt=""> ${b[lang]}</div>
+        <div class="build-name"><img class="svg-icon-inline" src="icons/${b.icon}" alt=""> ${b[lang]}</div>
         <div class="build-count">Построено: ${count}/${MAX_BUILDINGS}</div>
       </div>
       <button class="build-action" data-key="${key}" ${canBuild ? '' : 'disabled'}>
-        <img class="svg-icon-inline icon-white" src="icons/coins.svg" alt=""> ${cost}
+        <img class="svg-icon-inline" src="icons/coins.svg" alt=""> ${cost}
       </button>
     `;
     body.appendChild(row);
@@ -1416,6 +1444,13 @@ function resolveBattle(fromCity, toCity, composition) {
     state.welfare -= 8;
   }
   state.welfare = Math.max(0, Math.min(100, state.welfare));
+
+  if (victory) {
+    setEventMessage(`✅ Захвачен ${toCity.name}`, 'success');
+  } else {
+    setEventMessage(`💀 Потеряли войска под ${toCity.name}`, 'danger');
+  }
+
   showBattleResult(fromCity, toCity, victory, attackerGarrison, defenderGarrison, attackerLosses, defenderLosses);
   checkVictory();
 }
@@ -1427,7 +1462,7 @@ function showBattleResult(fromCity, toCity, victory, attacker, defender, attacke
   const lang = state.settings.language;
   title.textContent = `${lang === 'ru' ? 'Бой за' : 'Battle for'} ${toCity.name}`;
   const fmtG = (g, losses) => UNIT_ORDER.filter(k => (g[k] || 0) > 0)
-    .map(k => `<img class="svg-icon-inline icon-cyan" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
+    .map(k => `<img class="svg-icon-inline" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
   body.innerHTML = `
     <div class="battle-result ${victory ? 'battle-victory' : 'battle-defeat'}">
       <h3>${victory ? '✅ ' + (lang === 'ru' ? 'ПОБЕДА' : 'VICTORY') : '💀 ' + (lang === 'ru' ? 'ПОРАЖЕНИЕ' : 'DEFEAT')}</h3>
@@ -1584,6 +1619,20 @@ function update(dt) {
 
   updateAttacks(dt);
 
+  // Авто-сообщения
+  if (state.globalTime - state.lastEventTime > 15) {
+    if (state.welfare < 30) {
+      setEventMessage(`⚠️ Благосостояние критически низкое!`, 'danger');
+    } else if (state.services.corruption > 60) {
+      setEventMessage(`🕳️ Коррупция растёт: ${Math.floor(state.services.corruption)}%`, 'danger');
+    } else if (state.weather !== 'clear') {
+      setEventMessage(`🌦️ Погода: ${WEATHER[state.weather].ru}`, 'warning');
+    } else {
+      setEventMessage(`🟢 Обстановка стабильна`, 'info');
+    }
+    state.lastEventTime = state.globalTime;
+  }
+
   if (state.welfare <= 0) {
     state.gameOver = true;
     state.gameOverReason = 'defeat';
@@ -1630,16 +1679,42 @@ function updateHUD() {
   corEl.classList.remove('cor-good', 'cor-mid', 'cor-bad');
   corEl.classList.add(state.services.corruption < 30 ? 'cor-good' : state.services.corruption < 60 ? 'cor-mid' : 'cor-bad');
 
+  // Ресурсы с прогресс-барами
+  const r = state.resources;
+  const rm = RESOURCE_MAX;
+  document.getElementById('hud-ammo').textContent = Math.floor(r.ammo);
+  document.getElementById('res-ammo-bar').style.width = (r.ammo / rm.ammo * 100) + '%';
+  document.getElementById('hud-weapons').textContent = Math.floor(r.weapons);
+  document.getElementById('res-weapons-bar').style.width = (r.weapons / rm.weapons * 100) + '%';
+  document.getElementById('hud-tanks').textContent = Math.floor(r.tanks);
+  document.getElementById('res-tanks-bar').style.width = (r.tanks / rm.tanks * 100) + '%';
+  document.getElementById('hud-fuel').textContent = Math.floor(r.fuel);
+  document.getElementById('res-fuel-bar').style.width = (r.fuel / rm.fuel * 100) + '%';
+  document.getElementById('hud-drones').textContent = Math.floor(r.drones);
+  document.getElementById('res-drones-bar').style.width = (r.drones / rm.drones * 100) + '%';
+
+  // Игровая дата и время
+  const dayOfGame = Math.floor(state.globalTime / DAY_CYCLE_DURATION) + 1;
+  state.gameDay = dayOfGame;
+  const phaseT = state.dayTime % 1;
+  const hours = Math.floor(phaseT * 24);
+  const minutes = Math.floor((phaseT * 24 - hours) * 60);
+  document.getElementById('game-date').textContent =
+    `День ${dayOfGame}, ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+  // Время суток
   const phase = getCurrentPhase();
   const lang = state.settings.language;
   document.getElementById('time-icon').src = 'icons/' + phase.icon;
   document.getElementById('time-name').textContent = lang === 'ru' ? phase.ru : phase.en;
 
+  // Погода
   const weather = WEATHER[state.weather];
   document.getElementById('weather-icon').src = 'icons/' + weather.icon;
   document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
   document.getElementById('weather-effect').textContent = '×' + weather.speedMult.toFixed(1);
 
+  // Обстановка
   const sit = getSituation();
   document.getElementById('status-icon').textContent = sit.icon;
   document.getElementById('status-name').textContent = lang === 'ru' ? sit.ru : sit.en;
@@ -1661,6 +1736,7 @@ function renderMap() {
   if (worldTextureCanvas) ctx.drawImage(worldTextureCanvas, srcX, srcY, srcW, srcH, 0, 0, w, h);
   if (worldOverlayCanvas) ctx.drawImage(worldOverlayCanvas, srcX, srcY, srcW, srcH, 0, 0, w, h);
 
+  renderGrid(w, h);
   renderRoads();
   renderAttacks();
   renderCities();
@@ -1674,6 +1750,38 @@ function renderMap() {
   }
 
   renderVignette(w, h);
+}
+
+function renderGrid(w, h) {
+  if (camera.zoom < 0.6) return;
+  const step = MAP.TILE * 4;
+  const alpha = camera.zoom > 1 ? 0.10 : 0.05;
+
+  ctx.strokeStyle = `rgba(120, 180, 220, ${alpha})`;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 5]);
+
+  const startX = Math.floor(camera.x / step) * step;
+  const endX = camera.x + w / camera.zoom;
+  for (let wx = startX; wx <= endX; wx += step) {
+    const sx = (wx - camera.x) * camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx, h);
+    ctx.stroke();
+  }
+
+  const startY = Math.floor(camera.y / step) * step;
+  const endY = camera.y + h / camera.zoom;
+  for (let wy = startY; wy <= endY; wy += step) {
+    const sy = (wy - camera.y) * camera.zoom;
+    ctx.beginPath();
+    ctx.moveTo(0, sy);
+    ctx.lineTo(w, sy);
+    ctx.stroke();
+  }
+
+  ctx.setLineDash([]);
 }
 
 function renderWeather() {
@@ -1742,19 +1850,42 @@ function renderCityShadow(sx, sy, radius) {
 function renderRoads() {
   const rect = canvas.getBoundingClientRect();
   const tileSize = MAP.TILE * camera.zoom;
+
   ROADS.forEach(road => {
     const a = road.from, b = road.to;
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y1 = (a.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
     const x2 = (b.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const y2 = (b.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
+
     if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > rect.width ||
         Math.max(y1, y2) < 0 || Math.min(y1, y2) > rect.height) return;
-    const color = road.type === 'own' ? 'rgba(0, 212, 255, 0.4)'
-                : road.type === 'enemy' ? 'rgba(255, 59, 92, 0.4)'
-                : 'rgba(180, 190, 210, 0.35)';
+
+    const color = road.type === 'own'    ? 'rgba(0, 212, 255, 0.85)'
+                : road.type === 'enemy'  ? 'rgba(255, 59, 92, 0.85)'
+                : 'rgba(180, 190, 210, 0.75)';
+
+    const innerColor = road.type === 'own'    ? '#0a3a4a'
+                     : road.type === 'enemy'  ? '#4a0a1a'
+                     : '#2a3040';
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.lineWidth = Math.max(3, 4 * camera.zoom);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
+    ctx.lineWidth = Math.max(1.5, 2 * camera.zoom);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.strokeStyle = innerColor;
+    ctx.lineWidth = Math.max(0.5, 0.8 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -1828,11 +1959,6 @@ function renderCities() {
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
 
-    if (c.fortification > 0 && camera.zoom > 0.7) {
-      ctx.font = `${Math.max(12, 14 * camera.zoom)}px sans-serif`;
-      ctx.fillText(FORTIFICATIONS[c.fortification].level > 0 ? '⭐'.repeat(Math.min(c.fortification, 3)) : '', sx + tileSize / 2, sy + tileSize / 2 - radius - 8);
-    }
-
     const bTotal = Object.values(c.buildings || {}).reduce((a, b) => a + b, 0);
     if (bTotal >= 5 && camera.zoom > 0.7) {
       ctx.font = `${Math.max(12, 14 * camera.zoom)}px sans-serif`;
@@ -1901,6 +2027,8 @@ function startGame() {
   initCameraControls();
   centerOnPlayerBase();
 
+  setEventMessage('Добро пожаловать в Литийную Дугу', 'info');
+
   lastTime = performance.now();
   requestAnimationFrame(loop);
 }
@@ -1908,7 +2036,7 @@ function startGame() {
 // ============ КНОПКИ ============
 document.querySelectorAll('.speed-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    state.timeScale = parseInt(btn.dataset.speed);
+    state.timeScale = parseFloat(btn.dataset.speed);
     state.paused = false;
     document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');

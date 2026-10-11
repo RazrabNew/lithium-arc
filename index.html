@@ -60,14 +60,14 @@
     <div id="hud">
       <div class="hud-row resources">
         <div class="stat">
-          <img class="svg-icon icon-gold" src="icons/coins.svg" alt="">
+          <img class="svg-icon" src="icons/coins.svg" alt="">
           <div class="stat-body">
             <span class="value" id="money">0</span>
             <span class="sub" id="income">+0.0/с</span>
           </div>
         </div>
         <div class="stat">
-          <img class="svg-icon icon-cyan" src="icons/person.svg" alt="">
+          <img class="svg-icon" src="icons/person.svg" alt="">
           <span class="value" id="population">0</span>
         </div>
         <div class="stat">
@@ -75,17 +75,49 @@
           <span class="value" id="satisfaction">0%</span>
         </div>
         <div class="stat">
-          <img class="svg-icon icon-red" src="icons/handcuffs.svg" alt="">
+          <img class="svg-icon" src="icons/handcuffs.svg" alt="">
           <span class="value" id="corruption">0%</span>
         </div>
       </div>
+
+      <div class="hud-row resources-2">
+        <div class="stat res-stat">
+          <img class="svg-icon" src="icons/ammo.svg" alt="">
+          <div class="res-bar-wrap"><div class="res-bar-fill" id="res-ammo-bar"></div></div>
+          <span class="value" id="hud-ammo">0</span>
+        </div>
+        <div class="stat res-stat">
+          <img class="svg-icon" src="icons/sword.svg" alt="">
+          <div class="res-bar-wrap"><div class="res-bar-fill" id="res-weapons-bar"></div></div>
+          <span class="value" id="hud-weapons">0</span>
+        </div>
+        <div class="stat res-stat">
+          <img class="svg-icon" src="icons/tank.svg" alt="">
+          <div class="res-bar-wrap"><div class="res-bar-fill" id="res-tanks-bar"></div></div>
+          <span class="value" id="hud-tanks">0</span>
+        </div>
+        <div class="stat res-stat">
+          <img class="svg-icon" src="icons/oil-barrel.svg" alt="">
+          <div class="res-bar-wrap"><div class="res-bar-fill" id="res-fuel-bar"></div></div>
+          <span class="value" id="hud-fuel">0</span>
+        </div>
+        <div class="stat res-stat">
+          <img class="svg-icon" src="icons/drone.svg" alt="">
+          <div class="res-bar-wrap"><div class="res-bar-fill" id="res-drones-bar"></div></div>
+          <span class="value" id="hud-drones">0</span>
+        </div>
+      </div>
+
       <div class="hud-row weather-row">
         <div class="stat weather-stat">
-          <img class="svg-icon icon-gold" id="time-icon" src="icons/sun.svg" alt="">
-          <span class="value" id="time-name">День</span>
+          <img class="svg-icon" id="time-icon" src="icons/sun.svg" alt="">
+          <div class="stat-body">
+            <span class="value" id="time-name">День</span>
+            <span class="sub" id="game-date">День 1, 00:00</span>
+          </div>
         </div>
         <div class="stat weather-stat">
-          <img class="svg-icon icon-cyan" id="weather-icon" src="icons/sun.svg" alt="">
+          <img class="svg-icon" id="weather-icon" src="icons/sun.svg" alt="">
           <span class="value" id="weather-name">Ясно</span>
           <span class="sub" id="weather-effect">×1.0</span>
         </div>
@@ -94,17 +126,23 @@
           <span class="value" id="status-name">Затишье</span>
         </div>
       </div>
+
+      <div class="hud-row event-row">
+        <div class="event-ticker" id="event-ticker">Добро пожаловать в Литийную Дугу</div>
+      </div>
+
       <div class="hud-row controls-row">
         <div class="speed-group">
-          <button class="speed-btn" data-speed="1">×1</button>
+          <button class="speed-btn" data-speed="0.5">×0.5</button>
+          <button class="speed-btn active" data-speed="1">×1</button>
           <button class="speed-btn" data-speed="2">×2</button>
           <button class="speed-btn" data-speed="4">×4</button>
         </div>
         <div class="speed-group">
           <button class="zoom-btn" id="zoom-out">−</button>
           <button class="zoom-btn" id="zoom-in">+</button>
-          <button class="city-btn" id="actions-btn"><img class="svg-icon icon-gold" src="icons/government.svg" alt=""></button>
-          <button class="city-btn" id="city-list-btn"><img class="svg-icon icon-cyan" src="icons/buildings.svg" alt=""></button>
+          <button class="city-btn" id="actions-btn"><img class="svg-icon" src="icons/government.svg" alt=""></button>
+          <button class="city-btn" id="city-list-btn"><img class="svg-icon" src="icons/buildings.svg" alt=""></button>
           <button id="pause-btn">⏸</button>
         </div>
       </div>
@@ -129,19 +167,19 @@
       </div>
       <div class="city-panel-actions">
         <button id="city-attack-btn" class="action-btn attack-btn">
-          <img class="svg-icon icon-red" src="icons/crossed-swords.svg" alt="">
+          <img class="svg-icon" src="icons/crossed-swords.svg" alt="">
           <span>Наступление</span>
         </button>
         <button id="city-hire-btn" class="action-btn hire-btn">
-          <img class="svg-icon icon-gold" src="icons/soldier.svg" alt="">
+          <img class="svg-icon" src="icons/soldier.svg" alt="">
           <span>Найм</span>
         </button>
         <button id="city-fortify-btn" class="action-btn fortify-btn">
-          <img class="svg-icon icon-blue" src="icons/shield.svg" alt="">
+          <img class="svg-icon" src="icons/shield.svg" alt="">
           <span>Укрепиться</span>
         </button>
         <button id="city-build-btn" class="action-btn build-btn">
-          <img class="svg-icon icon-green" src="icons/hammer.svg" alt="">
+          <img class="svg-icon" src="icons/hammer.svg" alt="">
           <span>Строить</span>
         </button>
       </div>
@@ -170,23 +208,23 @@
       <div class="actions-header">
         <div class="actions-tabs">
           <button class="actions-tab active" data-tab="country">
-            <img class="svg-icon icon-gold" src="icons/government.svg" alt="">
+            <img class="svg-icon" src="icons/government.svg" alt="">
             <span data-i18n="tabCountry">Страна</span>
           </button>
           <button class="actions-tab" data-tab="services">
-            <img class="svg-icon icon-gold" src="icons/wrench.svg" alt="">
+            <img class="svg-icon" src="icons/wrench.svg" alt="">
             <span data-i18n="tabServices">Службы</span>
           </button>
           <button class="actions-tab" data-tab="logistics">
-            <img class="svg-icon icon-gold" src="icons/truck.svg" alt="">
+            <img class="svg-icon" src="icons/truck.svg" alt="">
             <span data-i18n="tabLogistics">Логистика</span>
           </button>
           <button class="actions-tab" data-tab="production">
-            <img class="svg-icon icon-gold" src="icons/factory.svg" alt="">
+            <img class="svg-icon" src="icons/factory.svg" alt="">
             <span data-i18n="tabProduction">Производство</span>
           </button>
           <button class="actions-tab" data-tab="army">
-            <img class="svg-icon icon-gold" src="icons/crossed-swords.svg" alt="">
+            <img class="svg-icon" src="icons/crossed-swords.svg" alt="">
             <span data-i18n="tabArmy">Армия</span>
           </button>
         </div>
@@ -198,25 +236,25 @@
         <div class="actions-panel" id="panel-country">
           <div class="action-block">
             <div class="action-row">
-              <span><img class="svg-icon-inline icon-cyan" src="icons/person.svg" alt=""> <span data-i18n="populationLabel">Население</span></span>
+              <span><img class="svg-icon-inline" src="icons/person.svg" alt=""> <span data-i18n="populationLabel">Население</span></span>
               <span class="action-value" id="ac-population">127.5 млн</span>
             </div>
             <div class="action-row">
-              <span><img class="svg-icon-inline icon-cyan" src="icons/baby.svg" alt=""> <span data-i18n="birthRate">Рождаемость</span></span>
+              <span><img class="svg-icon-inline" src="icons/baby.svg" alt=""> <span data-i18n="birthRate">Рождаемость</span></span>
               <span class="action-value" id="ac-birth">8.0‰</span>
             </div>
             <div class="action-row">
-              <span><img class="svg-icon-inline icon-red" src="icons/Skull.svg" alt=""> <span data-i18n="deathRate">Смертность</span></span>
+              <span><img class="svg-icon-inline" src="icons/Skull.svg" alt=""> <span data-i18n="deathRate">Смертность</span></span>
               <span class="action-value" id="ac-death">13‰</span>
             </div>
           </div>
           <div class="action-block">
             <div class="action-row">
-              <span><img class="svg-icon-inline icon-gold" src="icons/hammer.svg" alt=""> <span data-i18n="workersLabel">Работают</span></span>
+              <span><img class="svg-icon-inline" src="icons/hammer.svg" alt=""> <span data-i18n="workersLabel">Работают</span></span>
               <span class="action-value" id="ac-workers">43.4 млн</span>
             </div>
             <div class="action-row">
-              <span><img class="svg-icon-inline icon-red" src="icons/soldier.svg" alt=""> <span data-i18n="armyLabel">В армии</span></span>
+              <span><img class="svg-icon-inline" src="icons/soldier.svg" alt=""> <span data-i18n="armyLabel">В армии</span></span>
               <span class="action-value" id="ac-army">33.1 млн</span>
             </div>
             <div class="action-hint" id="ac-labor-hint"></div>
@@ -236,7 +274,7 @@
           <div class="action-block"><div class="action-hint" id="ac-multipliers"></div></div>
           <div class="action-block">
             <button id="ac-payments" class="action-btn-blue">
-              <img class="svg-icon icon-gold" src="icons/coins.svg" alt="">
+              <img class="svg-icon" src="icons/coins.svg" alt="">
               <span data-i18n="paymentsLabel">Выплаты населению</span> · <span id="ac-payments-cost">70</span> (+8)
             </button>
           </div>
@@ -246,56 +284,56 @@
         <div class="actions-panel hidden" id="panel-services">
           <div class="service-card">
             <div class="service-header">
-              <span class="service-title"><img class="svg-icon-inline icon-cyan" src="icons/microscope.svg" alt=""> <span data-i18n="svcScience">Наука</span></span>
+              <span class="service-title"><img class="svg-icon-inline" src="icons/microscope.svg" alt=""> <span data-i18n="svcScience">Наука</span></span>
               <span class="service-level" id="svc-science-level">31/100</span>
             </div>
             <div class="service-bar"><div class="service-bar-fill" id="svc-science-bar" style="width: 31%"></div></div>
             <button class="service-invest" id="svc-science-btn">
-              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="svc-science-cost">178</span>
+              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="svc-science-cost">178</span>
             </button>
             <div class="service-desc" data-i18n="svcScienceDesc">До +25% дохода</div>
           </div>
           <div class="service-card">
             <div class="service-header">
-              <span class="service-title"><img class="svg-icon-inline icon-cyan" src="icons/police-badge.svg" alt=""> <span data-i18n="svcOrder">Правопорядок</span></span>
+              <span class="service-title"><img class="svg-icon-inline" src="icons/police-badge.svg" alt=""> <span data-i18n="svcOrder">Правопорядок</span></span>
               <span class="service-level" id="svc-order-level">23/100</span>
             </div>
             <div class="service-bar"><div class="service-bar-fill" id="svc-order-bar" style="width: 23%"></div></div>
             <button class="service-invest" id="svc-order-btn">
-              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="svc-order-cost">128</span>
+              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="svc-order-cost">128</span>
             </button>
             <div class="service-desc" data-i18n="svcOrderDesc">Меньше беспорядков</div>
           </div>
           <div class="service-card">
             <div class="service-header">
-              <span class="service-title"><img class="svg-icon-inline icon-cyan" src="icons/medical-cross.svg" alt=""> <span data-i18n="svcHealth">Здравоохранение</span></span>
+              <span class="service-title"><img class="svg-icon-inline" src="icons/medical-cross.svg" alt=""> <span data-i18n="svcHealth">Здравоохранение</span></span>
               <span class="service-level" id="svc-health-level">23/100</span>
             </div>
             <div class="service-bar"><div class="service-bar-fill" id="svc-health-bar" style="width: 23%"></div></div>
             <button class="service-invest" id="svc-health-btn">
-              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="svc-health-cost">128</span>
+              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="svc-health-cost">128</span>
             </button>
             <div class="service-desc" data-i18n="svcHealthDesc">Снижает смертность</div>
           </div>
           <div class="service-card">
             <div class="service-header">
-              <span class="service-title"><img class="svg-icon-inline icon-cyan" src="icons/fire-truck.svg" alt=""> <span data-i18n="svcEmergency">МЧС</span></span>
+              <span class="service-title"><img class="svg-icon-inline" src="icons/fire-truck.svg" alt=""> <span data-i18n="svcEmergency">МЧС</span></span>
               <span class="service-level" id="svc-emergency-level">23/100</span>
             </div>
             <div class="service-bar"><div class="service-bar-fill" id="svc-emergency-bar" style="width: 23%"></div></div>
             <button class="service-invest" id="svc-emergency-btn">
-              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="svc-emergency-cost">128</span>
+              <span data-i18n="invest">Вложить +8</span> · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="svc-emergency-cost">128</span>
             </button>
             <div class="service-desc" data-i18n="svcEmergencyDesc">Меньше ущерба</div>
           </div>
           <div class="service-card corruption-card">
             <div class="service-header">
-              <span class="service-title"><img class="svg-icon-inline icon-red" src="icons/handcuffs.svg" alt=""> <span data-i18n="svcCorruption">Коррупция</span></span>
+              <span class="service-title"><img class="svg-icon-inline" src="icons/handcuffs.svg" alt=""> <span data-i18n="svcCorruption">Коррупция</span></span>
               <span class="service-level" id="svc-corruption-level">9/100</span>
             </div>
             <div class="service-bar corruption-bar"><div class="service-bar-fill" id="svc-corruption-bar" style="width: 9%"></div></div>
             <button class="service-invest corruption-btn" id="svc-corruption-btn">
-              <span data-i18n="antiCorruption">Антикоррупционная кампания</span> · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="svc-corruption-cost">104</span>
+              <span data-i18n="antiCorruption">Антикоррупционная кампания</span> · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="svc-corruption-cost">104</span>
             </button>
             <div class="service-desc" id="svc-corruption-desc"></div>
           </div>
@@ -303,170 +341,172 @@
 
         <!-- ЛОГИСТИКА -->
         <div class="actions-panel hidden" id="panel-logistics">
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-gold" src="icons/factory.svg" alt=""> <span data-i18n="grpEconomy">Экономика</span></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/factory.svg" alt=""> <span data-i18n="grpEconomy">Экономика</span></div>
 
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/cargo.svg" alt=""> <span data-i18n="techEconomy">Экономика</span></span>
-              <span class="logistics-level"><span id="tech-economy-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-economy-cost">300</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/cargo.svg" alt=""> <span data-i18n="techEconomy">Экономика</span></span>
+              <span class="logistics-level"><span id="tech-economy-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-economy-cost">300</span></span>
             </div>
             <button class="logistics-invest" id="tech-economy-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techEconomyDesc">+20% дохода за уровень</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/cargo.svg" alt=""> <span data-i18n="techLogistics">Логистика</span></span>
-              <span class="logistics-level"><span id="tech-logistics-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-logistics-cost">280</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/cargo.svg" alt=""> <span data-i18n="techLogistics">Логистика</span></span>
+              <span class="logistics-level"><span id="tech-logistics-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-logistics-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-logistics-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techLogisticsDesc">−8% расход, +10% выпуск</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/factory.svg" alt=""> <span data-i18n="techDroneFactory">Заводы дронов</span></span>
-              <span class="logistics-level"><span id="tech-dronefactory-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-dronefactory-cost">280</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/factory.svg" alt=""> <span data-i18n="techDroneFactory">Заводы дронов</span></span>
+              <span class="logistics-level"><span id="tech-dronefactory-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-dronefactory-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-dronefactory-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techDroneFactoryDesc">+0.04/с сборка дронов</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/buildings.svg" alt=""> <span data-i18n="techLife">Качество жизни</span></span>
-              <span class="logistics-level"><span id="tech-life-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-life-cost">380</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/buildings.svg" alt=""> <span data-i18n="techLife">Качество жизни</span></span>
+              <span class="logistics-level"><span id="tech-life-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-life-cost">380</span></span>
             </div>
             <button class="logistics-invest" id="tech-life-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techLifeDesc">+0.07 к благу/с</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/baby.svg" alt=""> <span data-i18n="techBirth">Рождаемость</span></span>
-              <span class="logistics-level"><span id="tech-birth-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-birth-cost">280</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/baby.svg" alt=""> <span data-i18n="techBirth">Рождаемость</span></span>
+              <span class="logistics-level"><span id="tech-birth-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-birth-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-birth-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techBirthDesc">+1.2‰ за уровень</div>
           </div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-red" src="icons/crossed-swords.svg" alt=""> <span data-i18n="grpMilitary">Военная мощь</span></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/crossed-swords.svg" alt=""> <span data-i18n="grpMilitary">Военная мощь</span></div>
 
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/soldier.svg" alt=""> <span data-i18n="techCombat">Боевая подготовка</span></span>
-              <span class="logistics-level"><span id="tech-combat-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-combat-cost">350</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/soldier.svg" alt=""> <span data-i18n="techCombat">Боевая подготовка</span></span>
+              <span class="logistics-level"><span id="tech-combat-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-combat-cost">350</span></span>
             </div>
             <button class="logistics-invest" id="tech-combat-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techCombatDesc">+12% атаки за уровень</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> <span data-i18n="techArmor">Военная техника</span></span>
-              <span class="logistics-level"><span id="tech-armor-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-armor-cost">300</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/tank.svg" alt=""> <span data-i18n="techArmor">Военная техника</span></span>
+              <span class="logistics-level"><span id="tech-armor-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-armor-cost">300</span></span>
             </div>
             <button class="logistics-invest" id="tech-armor-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techArmorDesc">+12% обороны за уровень</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/anti-aircraft.svg" alt=""> <span data-i18n="techAA">ПВО</span></span>
-              <span class="logistics-level"><span id="tech-aa-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-aa-cost">400</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/anti-aircraft.svg" alt=""> <span data-i18n="techAA">ПВО</span></span>
+              <span class="logistics-level"><span id="tech-aa-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-aa-cost">400</span></span>
             </div>
             <button class="logistics-invest" id="tech-aa-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techAADesc">Шанс сбить дроны</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> <span data-i18n="techDrones">Дроны</span></span>
-              <span class="logistics-level"><span id="tech-drones-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-drones-cost">350</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/drone.svg" alt=""> <span data-i18n="techDrones">Дроны</span></span>
+              <span class="logistics-level"><span id="tech-drones-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-drones-cost">350</span></span>
             </div>
             <button class="logistics-invest" id="tech-drones-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techDronesDesc">Открывает дроны</div>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/person.svg" alt=""> <span data-i18n="techMobilization">Мобилизация</span></span>
-              <span class="logistics-level"><span id="tech-mobilization-level">0</span>/6 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> <span id="tech-mobilization-cost">280</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/person.svg" alt=""> <span data-i18n="techMobilization">Мобилизация</span></span>
+              <span class="logistics-level"><span id="tech-mobilization-level">0</span>/6 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> <span id="tech-mobilization-cost">280</span></span>
             </div>
             <button class="logistics-invest" id="tech-mobilization-btn">Вложить</button>
             <div class="logistics-desc" data-i18n="techMobDesc">Открывает призыв</div>
-            <button class="mobilize-btn" id="mobilize-btn"><img class="svg-icon icon-white" src="icons/person.svg" alt=""> <span data-i18n="mobilize">Мобилизация · призыв</span></button>
+            <button class="mobilize-btn" id="mobilize-btn">
+              <img class="svg-icon" src="icons/person.svg" alt=""> <span data-i18n="mobilize">Мобилизация · призыв</span>
+            </button>
             <div class="logistics-desc" id="mobilize-desc"></div>
           </div>
         </div>
 
         <!-- ПРОИЗВОДСТВО -->
         <div class="actions-panel hidden" id="panel-production">
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-gold" src="icons/cargo.svg" alt=""> <span data-i18n="grpResources">Ресурсы</span></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/cargo.svg" alt=""> <span data-i18n="grpResources">Ресурсы</span></div>
 
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/ammo.svg" alt=""> <span data-i18n="resAmmo">Боеприпасы</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/ammo.svg" alt=""> <span data-i18n="resAmmo">Боеприпасы</span></span>
               <span class="logistics-level" id="res-ammo-count">0/300</span>
             </div>
             <div class="logistics-desc" id="res-ammo-prod">производство +0.00/с</div>
-            <button class="logistics-invest" id="buy-ammo-btn">Купить +20 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> 120</button>
+            <button class="logistics-invest" id="buy-ammo-btn">Купить +20 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> 120</button>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/sword.svg" alt=""> <span data-i18n="resWeapons">Оружие</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/sword.svg" alt=""> <span data-i18n="resWeapons">Оружие</span></span>
               <span class="logistics-level" id="res-weapons-count">0/200</span>
             </div>
             <div class="logistics-desc" id="res-weapons-prod">производство +0.00/с</div>
-            <button class="logistics-invest" id="buy-weapons-btn">Купить +10 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> 200</button>
+            <button class="logistics-invest" id="buy-weapons-btn">Купить +10 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> 200</button>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/tank.svg" alt=""> <span data-i18n="resTanks">Танки</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/tank.svg" alt=""> <span data-i18n="resTanks">Танки</span></span>
               <span class="logistics-level" id="res-tanks-count">0/40</span>
             </div>
             <div class="logistics-desc" id="res-tanks-prod">производство 0</div>
-            <button class="logistics-invest" id="buy-tanks-btn">Купить +1 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> 160</button>
+            <button class="logistics-invest" id="buy-tanks-btn">Купить +1 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> 160</button>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/oil-barrel.svg" alt=""> <span data-i18n="resFuel">Топливо</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/oil-barrel.svg" alt=""> <span data-i18n="resFuel">Топливо</span></span>
               <span class="logistics-level" id="res-fuel-count">0/300</span>
             </div>
             <div class="logistics-desc" id="res-fuel-prod">производство +0.00/с</div>
-            <button class="logistics-invest" id="buy-fuel-btn">Купить +20 · <img class="svg-icon-inline icon-gold" src="icons/coins.svg" alt=""> 160</button>
+            <button class="logistics-invest" id="buy-fuel-btn">Купить +20 · <img class="svg-icon-inline" src="icons/coins.svg" alt=""> 160</button>
           </div>
           <div class="logistics-card">
             <div class="logistics-header">
-              <span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/drone.svg" alt=""> <span data-i18n="resDrones">Дроны</span></span>
+              <span class="logistics-title"><img class="svg-icon-inline" src="icons/drone.svg" alt=""> <span data-i18n="resDrones">Дроны</span></span>
               <span class="logistics-level" id="res-drones-count">0/100</span>
             </div>
             <div class="logistics-desc" id="res-drones-prod">производство +0.00/с</div>
           </div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-gold" src="icons/hammer.svg" alt=""> <span data-i18n="grpBuild">Здания в городах</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/pickaxe.svg" alt=""> <span data-i18n="bldMine">Шахта</span></span><span class="logistics-level" id="bld-mine-total">0</span></div><div class="logistics-desc">+4 дохода/с</div></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/factory.svg" alt=""> <span data-i18n="bldFactory">Завод</span></span><span class="logistics-level" id="bld-factory-total">0</span></div><div class="logistics-desc">+2.5 дохода</div></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/ammo-box.svg" alt=""> <span data-i18n="bldAmmo">Завод боеприпасов</span></span><span class="logistics-level" id="bld-ammo-total">0</span></div><div class="logistics-desc">+1.2 боеприпасов/с</div></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/sword.svg" alt=""> <span data-i18n="bldWeapon">Оружейный завод</span></span><span class="logistics-level" id="bld-weapon-total">0</span></div><div class="logistics-desc">+0.6 оружия/с</div></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/tank.svg" alt=""> <span data-i18n="bldTank">Танковый завод</span></span><span class="logistics-level" id="bld-tank-total">0</span></div><div class="logistics-desc">+0.15 танка/с</div></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-gold" src="icons/oil-pump.svg" alt=""> <span data-i18n="bldOil">Нефтяная скважина</span></span><span class="logistics-level" id="bld-oil-total">0</span></div><div class="logistics-desc">+1.0 топлива/с</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/hammer.svg" alt=""> <span data-i18n="grpBuild">Здания в городах</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/pickaxe.svg" alt=""> <span data-i18n="bldMine">Шахта</span></span><span class="logistics-level" id="bld-mine-total">0</span></div><div class="logistics-desc">+4 дохода/с</div></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/factory.svg" alt=""> <span data-i18n="bldFactory">Завод</span></span><span class="logistics-level" id="bld-factory-total">0</span></div><div class="logistics-desc">+2.5 дохода</div></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/ammo-box.svg" alt=""> <span data-i18n="bldAmmo">Завод боеприпасов</span></span><span class="logistics-level" id="bld-ammo-total">0</span></div><div class="logistics-desc">+1.2 боеприпасов/с</div></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/sword.svg" alt=""> <span data-i18n="bldWeapon">Оружейный завод</span></span><span class="logistics-level" id="bld-weapon-total">0</span></div><div class="logistics-desc">+0.6 оружия/с</div></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/tank.svg" alt=""> <span data-i18n="bldTank">Танковый завод</span></span><span class="logistics-level" id="bld-tank-total">0</span></div><div class="logistics-desc">+0.15 танка/с</div></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/oil-pump.svg" alt=""> <span data-i18n="bldOil">Нефтяная скважина</span></span><span class="logistics-level" id="bld-oil-total">0</span></div><div class="logistics-desc">+1.0 топлива/с</div></div>
         </div>
 
         <!-- АРМИЯ -->
         <div class="actions-panel hidden" id="panel-army">
           <div class="action-block">
-            <div class="action-row"><span><img class="svg-icon-inline icon-red" src="icons/crossed-swords.svg" alt=""> <span data-i18n="armyTotal">Всего войск:</span></span><span class="action-value" id="army-total">0</span></div>
-            <div class="action-row"><span><img class="svg-icon-inline icon-cyan" src="icons/castle.svg" alt=""> <span data-i18n="armyGarrisons">В гарнизонах:</span></span><span class="action-value" id="army-garrisons">0</span></div>
-            <div class="action-row"><span><img class="svg-icon-inline icon-gold" src="icons/truck.svg" alt=""> <span data-i18n="armyInField">В поле:</span></span><span class="action-value" id="army-in-field">0</span></div>
+            <div class="action-row"><span><img class="svg-icon-inline" src="icons/crossed-swords.svg" alt=""> <span data-i18n="armyTotal">Всего войск:</span></span><span class="action-value" id="army-total">0</span></div>
+            <div class="action-row"><span><img class="svg-icon-inline" src="icons/castle.svg" alt=""> <span data-i18n="armyGarrisons">В гарнизонах:</span></span><span class="action-value" id="army-garrisons">0</span></div>
+            <div class="action-row"><span><img class="svg-icon-inline" src="icons/truck.svg" alt=""> <span data-i18n="armyInField">В поле:</span></span><span class="action-value" id="army-in-field">0</span></div>
           </div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-cyan" src="icons/soldier.svg" alt=""> <span data-i18n="unitInfantry">Пехота</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/soldier.svg" alt=""> Пехота</span><span class="logistics-level" id="army-infantry-count">0</span></div><div class="logistics-desc">Базовая боевая единица.</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/soldier.svg" alt=""> <span data-i18n="unitInfantry">Пехота</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/soldier.svg" alt=""> Пехота</span><span class="logistics-level" id="army-infantry-count">0</span></div><div class="logistics-desc">Базовая боевая единица.</div></div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> <span data-i18n="unitTanks">Танки</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/tank.svg" alt=""> Танки</span><span class="logistics-level" id="army-tanks-count">0</span></div><div class="logistics-desc">Тяжёлые войска.</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/tank.svg" alt=""> <span data-i18n="unitTanks">Танки</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/tank.svg" alt=""> Танки</span><span class="logistics-level" id="army-tanks-count">0</span></div><div class="logistics-desc">Тяжёлые войска.</div></div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-cyan" src="icons/anti-aircraft.svg" alt=""> <span data-i18n="unitAA">ПВО</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/anti-aircraft.svg" alt=""> ПВО</span><span class="logistics-level" id="army-aa-count">0</span></div><div class="logistics-desc">Сбивает дроны.</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/anti-aircraft.svg" alt=""> <span data-i18n="unitAA">ПВО</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/anti-aircraft.svg" alt=""> ПВО</span><span class="logistics-level" id="army-aa-count">0</span></div><div class="logistics-desc">Сбивает дроны.</div></div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-cyan" src="icons/missile.svg" alt=""> <span data-i18n="unitMissiles">Ракеты</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/missile.svg" alt=""> Ракеты</span><span class="logistics-level" id="army-missiles-count">0</span></div><div class="logistics-desc">Дальний удар.</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/missile.svg" alt=""> <span data-i18n="unitMissiles">Ракеты</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/missile.svg" alt=""> Ракеты</span><span class="logistics-level" id="army-missiles-count">0</span></div><div class="logistics-desc">Дальний удар.</div></div>
 
-          <div class="logistics-group-title"><img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> <span data-i18n="unitDrones">Дроны</span></div>
-          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline icon-cyan" src="icons/drone.svg" alt=""> Дроны</span><span class="logistics-level" id="army-drones-count">0</span></div><div class="logistics-desc">Разведка и атака.</div></div>
+          <div class="logistics-group-title"><img class="svg-icon-inline" src="icons/drone.svg" alt=""> <span data-i18n="unitDrones">Дроны</span></div>
+          <div class="logistics-card"><div class="logistics-header"><span class="logistics-title"><img class="svg-icon-inline" src="icons/drone.svg" alt=""> Дроны</span><span class="logistics-level" id="army-drones-count">0</span></div><div class="logistics-desc">Разведка и атака.</div></div>
         </div>
       </div>
     </div>
@@ -502,7 +542,7 @@
           <button id="send-modal-close">✕</button>
         </div>
         <div id="send-modal-body"></div>
-        <button id="send-confirm-btn" class="action-btn" style="margin-top:12px;">ОТПРАВИТЬ</button>
+        <button id="send-confirm-btn" class="action-btn" style="margin-top:12px;justify-content:center;">ОТПРАВИТЬ</button>
       </div>
     </div>
 
@@ -514,7 +554,7 @@
           <button id="battle-modal-close">✕</button>
         </div>
         <div id="battle-modal-body"></div>
-        <button id="battle-ok-btn" class="action-btn" style="margin-top:12px;">OK</button>
+        <button id="battle-ok-btn" class="action-btn" style="margin-top:12px;justify-content:center;">OK</button>
       </div>
     </div>
 
