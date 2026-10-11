@@ -53,10 +53,6 @@ body {
   object-fit: contain;
 }
 
-.icon-cyan, .icon-red, .icon-gold, .icon-blue, .icon-green, .icon-white {
-  filter: none;
-}
-
 /* ===== АНИМАЦИИ ===== */
 @keyframes modal-fade-in {
   from { opacity: 0; }
@@ -64,25 +60,13 @@ body {
 }
 
 @keyframes modal-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes panel-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes ticker-pulse {
@@ -206,7 +190,6 @@ body {
 #income.positive { color: var(--green); }
 #income.negative { color: var(--red); }
 
-/* Ресурсы с прогресс-барами */
 .resources-2 {
   border-bottom: 1px solid var(--border-dim);
   gap: 4px;
@@ -250,7 +233,6 @@ body {
   transition: width 0.3s;
 }
 
-/* ПОГОДА — 2 блока по 50% */
 .weather-row {
   border-bottom: 1px solid var(--border-dim);
   gap: 4px;
@@ -268,9 +250,7 @@ body {
   max-width: 50%;
 }
 
-.weather-half .stat-body {
-  min-width: 0;
-}
+.weather-half .stat-body { min-width: 0; }
 
 .weather-half .value {
   font-size: 12px;
@@ -286,7 +266,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* ЭКГ + Обстановка */
 .situation-row {
   display: flex;
   align-items: stretch;
@@ -355,7 +334,6 @@ body {
   animation: ticker-pulse 1.2s infinite;
 }
 
-/* Кнопки управления */
 .speed-group { display: flex; gap: 4px; }
 
 .speed-btn, #pause-btn, .city-btn, .zoom-btn {
@@ -383,6 +361,37 @@ body {
 }
 
 #game-screen { touch-action: none; overscroll-behavior: none; }
+
+/* РАКЕТНАЯ ОПАСНОСТЬ */
+.missile-warning {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 59, 92, 0.15);
+  border: 1.5px solid var(--red);
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 150;
+  box-shadow: 0 0 20px rgba(255, 59, 92, 0.6);
+  animation: ticker-pulse 0.8s infinite;
+  pointer-events: none;
+}
+
+.missile-warning-icon { font-size: 20px; }
+.missile-warning-text { line-height: 1.2; }
+.missile-warning-title {
+  font-size: 11px; font-weight: 900; color: #fff; letter-spacing: 2px;
+}
+.missile-warning-target {
+  font-size: 13px; color: var(--red); font-weight: 700; margin-top: 2px;
+}
+.missile-warning-eta {
+  font-size: 16px; font-weight: 900; color: #fff; min-width: 40px; text-align: right;
+}
 
 /* ПАНЕЛЬ ГОРОДА */
 .city-panel {

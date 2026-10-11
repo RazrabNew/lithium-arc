@@ -35,7 +35,7 @@ function initAudio() {
   if (audioInitialized) return;
   audioInitialized = true;
 
-  explosionPool = makeAudioPool(SOUND_PATHS.explosion, 2);
+  explosionPool = makeAudioPool(SOUND_PATHS.explosion, 3);
 
   footstepsLoop = new Audio(SOUND_PATHS.footsteps);
   footstepsLoop.loop = true;
@@ -91,9 +91,7 @@ function stopApproachSound() {
 function startApproachSound(intensity = 0.5) {
   stopApproachSound();
   approachShotInterval = setInterval(() => {
-    if (Math.random() < 0.35) {
-      playExplosion(0.25 * intensity);
-    }
+    if (Math.random() < 0.35) playExplosion(0.25 * intensity);
   }, 1200 + Math.random() * 800);
 }
 
@@ -118,11 +116,10 @@ function stopBattleSound() {
 
 function updateMarchLoops() {
   const moving = ACTIVE_ATTACKS.filter(a => !a.phase || a.phase === 'moving');
-
-  let hasInfantry = false;
-  let hasTanks = false;
+  let hasInfantry = false, hasTanks = false;
 
   moving.forEach(atk => {
+    if (atk.type === 'strike') return;
     const comp = atk.composition || {};
     if ((comp.infantry || 0) > 0) hasInfantry = true;
     if ((comp.tanks || 0) > 0) hasTanks = true;
@@ -283,13 +280,14 @@ const UNIT_TYPES = {
 };
 
 const UNIT_ORDER = ['infantry', 'tanks', 'aa', 'missiles', 'drones'];
-
 const ATTACK_UNITS = ['infantry', 'tanks'];
+const GROUND_DEFENDERS = ['infantry', 'tanks'];
 
 // ============ ПВО ============
-const AA_RADIUS = 5;
-const AA_TICK_INTERVAL = 0.3;
-const AA_BASE_CHANCE = 0.15;
+const AA_RADIUS = 3;
+const AA_MAX_RADIUS = 5;
+const AA_TICK_INTERVAL = 0.5;
+const AA_BASE_CHANCE = 0.05;
 const AA_UNIT_MULT = { drones: 1.5, missiles: 0.6 };
 
 // ============ СТРАТЕГИЧЕСКИЕ УДАРЫ ============
@@ -321,9 +319,8 @@ function calcAttackCost(composition) {
   ATTACK_UNITS.forEach(k => {
     const count = composition[k] || 0;
     if (count === 0) return;
-    const cost = UNIT_COST_PER_ATTACK[k];
-    ammo += cost.ammo * count;
-    fuel += cost.fuel * count;
+    ammo += UNIT_COST_PER_ATTACK[k].ammo * count;
+    fuel += UNIT_COST_PER_ATTACK[k].fuel * count;
   });
   return { ammo, fuel };
 }
@@ -338,14 +335,11 @@ function calcTransferCost(composition) {
   return { ammo: 0, fuel };
 }
 
-// ИКОНКИ АТАК
 let apcImage = null;
-
 function loadAttackImages() {
   apcImage = new Image(); apcImage.src = 'icons/apc.png';
 }
 
-// ГАРНИЗОН
 function makeStartingGarrison() { return { infantry: 5, tanks: 2, aa: 0, missiles: 0, drones: 0 }; }
 function makeEmptyGarrison() { return { infantry: 0, tanks: 0, aa: 0, missiles: 0, drones: 0 }; }
 
@@ -366,7 +360,7 @@ function canHire(city, unitType, count = 1) {
   return true;
 }
 
-// WEATHER
+// ============ WEATHER ============
 const WEATHER = {
   clear:    { icon: 'sun.svg', ru: 'Ясно',   en: 'Clear',    speedMult: 1.0, incomeMult: 1.00, welfareDelta: 0,     aaMult: 1.0 },
   rain:     { icon: 'rain.svg', ru: 'Дождь',  en: 'Rain',     speedMult: 0.8, incomeMult: 0.95, welfareDelta: 0,     aaMult: 1.0 },
@@ -377,7 +371,7 @@ const WEATHER = {
 };
 const WEATHER_KEYS = ['clear', 'clear', 'clear', 'rain', 'rain', 'snow', 'fog', 'storm', 'blizzard'];
 
-// DAY/NIGHT
+// ============ DAY/NIGHT ============
 const DAY_CYCLE_DURATION = 240;
 const DAY_PHASES = [
   { key: 'dawn',  icon: 'sun.svg', ru: 'Рассвет', en: 'Dawn',  start: 0.000, end: 0.125 },
@@ -413,8 +407,9 @@ const state = {
   statusOverrideUntil: 0,
   warnedAboutAttack: false,
   captureEffects: [],
+  interceptLog: [],
+  missileAlerts: [],
 
-  // AI
   aiMoney: 0,
   aiResources: { ammo: 0, weapons: 0, tanks: 0, fuel: 0, drones: 0 },
   aiTech: { economy: 0, combat: 0, armor: 0, logistics: 0, aa: 0, drones: 0, dronefactory: 0, mobilization: 0 },
@@ -640,27 +635,37 @@ function getRoadsFrom(city) {
   return ROADS.filter(r => r.from === city || r.to === city).map(r => r.from === city ? r.to : r.from);
 }
 
+function canReachByRoad(fromCity, toCity) {
+  return ROADS.some(r =>
+    (r.from === fromCity && r.to === toCity) ||
+    (r.to === fromCity && r.from === toCity)
+  );
+}
+
 function generateRoads() {
   ROADS = [];
   const seen = new Set();
+
+  // Внутрифракционные дороги
   CITIES.forEach(city => {
-    const neighbors = CITIES.filter(c => c !== city)
+    const sameFaction = CITIES.filter(c => c !== city && c.owner === city.owner);
+    const neighbors = sameFaction
       .map(c => ({ city: c, dist: Math.hypot(c.x - city.x, c.y - city.y) }))
       .sort((a, b) => a.dist - b.dist);
-    let maxLinks = city.type === 'capital' ? 4 : city.type === 'large' ? 3 : 2;
+    let maxLinks = city.type === 'capital' ? 5 : city.type === 'large' ? 4 : 3;
     let links = 0;
     for (const { city: neighbor, dist } of neighbors) {
       if (links >= maxLinks) break;
-      if (dist > 8) break;
+      if (dist > 10) break;
       const key = [CITIES.indexOf(city), CITIES.indexOf(neighbor)].sort().join('-');
       if (seen.has(key)) { links++; continue; }
-      if (city.owner !== neighbor.owner) continue;
       seen.add(key);
       ROADS.push({ from: city, to: neighbor, type: city.owner === 'aurora' ? 'own' : 'enemy' });
       links++;
     }
   });
 
+  // Пограничные дороги
   const auroraCities = CITIES.filter(c => c.owner === 'aurora');
   const vesperCities = CITIES.filter(c => c.owner === 'vesper');
   auroraCities.forEach(aCity => {
@@ -669,8 +674,8 @@ function generateRoads() {
       .sort((a, b) => a.dist - b.dist);
     let borderLinks = 0;
     for (const { city: vCity, dist } of enemyNeighbors) {
-      if (borderLinks >= 1) break;
-      if (dist > 10) break;
+      if (borderLinks >= 2) break;
+      if (dist > 12) break;
       const key = [CITIES.indexOf(aCity), CITIES.indexOf(vCity)].sort().join('-');
       if (seen.has(key)) continue;
       seen.add(key);
@@ -678,6 +683,54 @@ function generateRoads() {
       borderLinks++;
     }
   });
+}
+
+// ============ ЛИНИИ ПО ДОРОГАМ ============
+function calcRoadDistancesFromPlayer() {
+  const dist = new Map();
+  const queue = [];
+  CITIES.forEach(c => {
+    if (c.owner === state.faction) {
+      dist.set(c, 0);
+      queue.push(c);
+    }
+  });
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const d = dist.get(current);
+    getRoadsFrom(current).forEach(nb => {
+      if (!dist.has(nb) || dist.get(nb) > d + 1) {
+        dist.set(nb, d + 1);
+        queue.push(nb);
+      }
+    });
+  }
+  return dist;
+}
+
+let roadDistCache = null;
+let roadDistCacheTime = -999;
+
+function getRoadDistances() {
+  if (!roadDistCache || state.globalTime - roadDistCacheTime > 2) {
+    roadDistCache = calcRoadDistancesFromPlayer();
+    roadDistCacheTime = state.globalTime;
+  }
+  return roadDistCache;
+}
+
+function canStrikeWithDrones(target) {
+  if (target.owner === state.faction) return false;
+  const dist = getRoadDistances().get(target);
+  if (dist === undefined) return false;
+  return dist >= 2;
+}
+
+function canStrikeWithMissiles(target) {
+  if (target.owner === state.faction) return false;
+  const dist = getRoadDistances().get(target);
+  if (dist === undefined) return false;
+  return dist >= 3;
 }
 
 // ============ WORLD CANVAS ============
@@ -1100,51 +1153,318 @@ function openAttackSourcesPanel(targetCity, sources) {
       </div>
       <div class="target-info">→ ${targetCity.name}</div>
     `;
-    row.addEventListener('click', () => { closeAttackSourcesPanel(); closeCityPanel(); openSendModal(source, targetCity); });
+    row.addEventListener('click', () => {
+      closeAttackSourcesPanel();
+      closeCityPanel();
+      openAttackTypeChoice(source, targetCity);
+    });
     list.appendChild(row);
   });
 }
 function closeAttackSourcesPanel() { document.getElementById('attack-sources-panel').classList.add('hidden'); }
 document.getElementById('attack-sources-close').addEventListener('click', closeAttackSourcesPanel);
 
-// ============ ОТПРАВКА ============
-let sendFromCity = null, sendToCity = null, sendComposition = null;
+// ============ ВЫБОР ТИПА АТАКИ ============
+function openAttackTypeChoice(fromCity, targetCity) {
+  const canLand = canReachByRoad(fromCity, targetCity);
+  const canDrone = canStrikeWithDrones(targetCity);
+  const canMissile = canStrikeWithMissiles(targetCity);
 
-function openSendModal(fromCity, forcedTarget = null) {
-  const directTargets = getRoadsFrom(fromCity).filter(c => c.owner !== state.faction);
+  const options = [];
+  if (canLand) options.push('land');
+  if (canDrone) options.push('drones');
+  if (canMissile) options.push('missiles');
 
-  if (forcedTarget) {
-    openSendCompositionModal(fromCity, forcedTarget, 1);
+  if (options.length === 0) return;
+  if (options.length === 1) {
+    if (options[0] === 'land') openSendCompositionModal(fromCity, targetCity, 'land');
+    else openStrikeCompositionModal(fromCity, targetCity, options[0]);
     return;
   }
 
-  if (directTargets.length === 0) return;
+  const modal = document.getElementById('send-modal');
+  const title = document.getElementById('send-modal-title');
+  const body = document.getElementById('send-modal-body');
+  const confirmBtn = document.getElementById('send-confirm-btn');
 
-  if (directTargets.length === 1) {
-    openSendCompositionModal(fromCity, directTargets[0], 1);
-  } else {
-    const dict = LANG[state.settings.language];
-    const list = document.getElementById('attack-targets');
-    const panel = document.getElementById('attack-target-panel');
-    panel.classList.remove('hidden');
-    list.innerHTML = '';
+  title.textContent = `🎯 ${fromCity.name} → ${targetCity.name}`;
+  confirmBtn.style.display = 'none';
 
-    directTargets.forEach(target => {
+  body.innerHTML = '';
+
+  if (canLand) {
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.innerHTML = `
+      <div>
+        <div class="target-name">⚔️ Наземная атака</div>
+        <div class="target-info">Пехота и танки · только по дороге</div>
+      </div>
+    `;
+    row.addEventListener('click', () => openSendCompositionModal(fromCity, targetCity, 'land'));
+    body.appendChild(row);
+  }
+
+  if (canDrone) {
+    const count = Math.floor(state.resources.drones);
+    const canUse = count >= STRIKE_COST.drones.count;
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.style.opacity = canUse ? '1' : '0.5';
+    row.innerHTML = `
+      <div>
+        <div class="target-name">🛸 Удар дронами</div>
+        <div class="target-info">
+          Дронов: ${count} · нужно ${STRIKE_COST.drones.count} шт
+          · Урон инфре: ${STRIKE_DAMAGE.drones.infra * STRIKE_COST.drones.count}%
+        </div>
+      </div>
+    `;
+    if (canUse) {
+      row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'drones'));
+    }
+    body.appendChild(row);
+  }
+
+  if (canMissile) {
+    const weapons = Math.floor(state.resources.weapons);
+    const fuel = Math.floor(state.resources.fuel);
+    const c = STRIKE_COST.missiles;
+    const canUse = weapons >= c.ammo && fuel >= c.fuel;
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.style.opacity = canUse ? '1' : '0.5';
+    row.innerHTML = `
+      <div>
+        <div class="target-name">🚀 Ракетный удар</div>
+        <div class="target-info">
+          Оружие: ${weapons} · топливо: ${fuel}
+          · Урон: ${STRIKE_DAMAGE.missiles.infra}% инфры
+        </div>
+      </div>
+    `;
+    if (canUse) {
+      row.addEventListener('click', () => openStrikeCompositionModal(fromCity, targetCity, 'missiles'));
+    }
+    body.appendChild(row);
+  }
+
+  const closeRow = document.createElement('div');
+  closeRow.className = 'target-row';
+  closeRow.style.justifyContent = 'center';
+  closeRow.innerHTML = `<div class="target-info">Отмена</div>`;
+  closeRow.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    confirmBtn.style.display = 'flex';
+  });
+  body.appendChild(closeRow);
+
+  modal.classList.remove('hidden');
+}
+
+// ============ МОДАЛКА STRIKE ============
+function openStrikeCompositionModal(fromCity, toCity, strikeType) {
+  const modal = document.getElementById('send-modal');
+  const title = document.getElementById('send-modal-title');
+  const body = document.getElementById('send-modal-body');
+  const confirmBtn = document.getElementById('send-confirm-btn');
+
+  title.textContent = strikeType === 'drones'
+    ? `🛸 Удар дронами · ${toCity.name}`
+    : `🚀 Ракетный удар · ${toCity.name}`;
+
+  confirmBtn.style.display = 'flex';
+
+  let count = strikeType === 'drones' ? STRIKE_COST.drones.count : 1;
+
+  const render = () => {
+    body.innerHTML = '';
+
+    if (strikeType === 'drones') {
+      const available = Math.floor(state.resources.drones);
       const row = document.createElement('div');
-      row.className = 'target-row';
+      row.className = 'send-row';
       row.innerHTML = `
-        <div>
-          <div class="target-name">${target.name}</div>
-          <div class="target-info">${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper} · Сила: ${getCityPower(target).toFixed(1)}</div>
+        <div class="send-row-name">
+          <img class="svg-icon-inline" src="icons/drone.svg" alt="">
+          Дроны (${available})
+        </div>
+        <div class="send-row-controls">
+          <button class="send-row-btn" data-delta="-5" ${count <= 5 ? 'disabled' : ''}>−5</button>
+          <div class="send-row-value">${count}</div>
+          <button class="send-row-btn" data-delta="5" ${count + 5 > available ? 'disabled' : ''}>+5</button>
         </div>
       `;
-      row.addEventListener('click', () => {
-        closeAttackTargetPanel();
-        openSendCompositionModal(fromCity, target, 1);
+      body.appendChild(row);
+
+      const summary = document.createElement('div');
+      summary.className = 'send-summary';
+      summary.innerHTML = `
+        Урон инфраструктуре: <b>${STRIKE_DAMAGE.drones.infra * count}%</b><br>
+        Шанс уничтожить здание: <b>${Math.round(STRIKE_DAMAGE.drones.building * 100)}%</b> за дрон<br>
+        Дроны игнорируют дороги, но могут быть сбиты ПВО
+      `;
+      body.appendChild(summary);
+
+      if (available < count) {
+        const warn = document.createElement('div');
+        warn.className = 'send-warning';
+        warn.innerHTML = `⚠️ Не хватает дронов: ${count - available}`;
+        body.appendChild(warn);
+      }
+
+      confirmBtn.disabled = available < count;
+    } else {
+      const weapons = Math.floor(state.resources.weapons);
+      const fuel = Math.floor(state.resources.fuel);
+      const cost = STRIKE_COST.missiles;
+
+      const row = document.createElement('div');
+      row.className = 'send-row';
+      row.innerHTML = `
+        <div class="send-row-name">
+          <img class="svg-icon-inline" src="icons/missile.svg" alt="">
+          Ракета (1 шт)
+        </div>
+      `;
+      body.appendChild(row);
+
+      const summary = document.createElement('div');
+      summary.className = 'send-summary';
+      summary.innerHTML = `
+        Урон инфраструктуре: <b>${STRIKE_DAMAGE.missiles.infra}%</b><br>
+        Шанс уничтожить здание: <b>${Math.round(STRIKE_DAMAGE.missiles.building * 100)}%</b><br>
+        Ракеты быстрее дронов, но легче сбиваются ПВО<br>
+        Оружие: ${weapons} / нужно ${cost.ammo}<br>
+        Топливо: ${fuel} / нужно ${cost.fuel}
+      `;
+      body.appendChild(summary);
+
+      const hasRes = weapons >= cost.ammo && fuel >= cost.fuel;
+      if (!hasRes) {
+        const warn = document.createElement('div');
+        warn.className = 'send-warning';
+        warn.innerHTML = `⚠️ Не хватает ресурсов`;
+        body.appendChild(warn);
+      }
+
+      confirmBtn.disabled = !hasRes;
+    }
+
+    body.querySelectorAll('.send-row-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const delta = parseInt(btn.dataset.delta);
+        const available = Math.floor(state.resources.drones);
+        count = Math.max(5, Math.min(available, count + delta));
+        count = Math.round(count / 5) * 5;
+        render();
       });
-      list.appendChild(row);
     });
+  };
+
+  render();
+
+  // Клонируем кнопку, чтобы снять старые обработчики
+  const fresh = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(fresh, confirmBtn);
+
+  fresh.addEventListener('click', () => {
+    if (strikeType === 'drones') {
+      if (state.resources.drones < count) return;
+      state.resources.drones -= count;
+
+      ACTIVE_ATTACKS.push({
+        from: fromCity, to: toCity,
+        composition: { infantry: 0, tanks: 0, aa: 0, missiles: 0, drones: count },
+        progress: 0,
+        speed: 0.2 * WEATHER[state.weather].speedMult * getDayEffects().speedMult * 2.0,
+        type: 'strike', strikeUnit: 'drones',
+        line: 1, phase: 'moving',
+        battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
+      });
+      setEventMessage(`🛸 Дроны вылетели к ${toCity.name}`, 'info');
+    } else {
+      const cost = STRIKE_COST.missiles;
+      if (state.resources.weapons < cost.ammo || state.resources.fuel < cost.fuel) return;
+      state.resources.weapons -= cost.ammo;
+      state.resources.fuel -= cost.fuel;
+
+      ACTIVE_ATTACKS.push({
+        from: fromCity, to: toCity,
+        composition: { infantry: 0, tanks: 0, aa: 0, missiles: 1, drones: 0 },
+        progress: 0,
+        speed: 0.2 * WEATHER[state.weather].speedMult * getDayEffects().speedMult * 3.0,
+        type: 'strike', strikeUnit: 'missiles',
+        line: 1, phase: 'moving',
+        battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
+      });
+      setEventMessage(`🚀 Ракета вылетела к ${toCity.name}`, 'info');
+    }
+
+    modal.classList.add('hidden');
+    fresh.style.display = 'flex';
+    closeCityPanel();
+    updateMarchLoops();
+  });
+
+  modal.classList.remove('hidden');
+}
+
+// ============ ОТПРАВКА НАЗЕМНОЙ АТАКИ ============
+let sendFromCity = null, sendToCity = null, sendComposition = null;
+
+function openSendModal(fromCity, forcedTarget = null) {
+  const landTargets = CITIES.filter(c =>
+    c.owner !== state.faction && canReachByRoad(fromCity, c)
+  );
+  const droneTargets = CITIES.filter(c => canStrikeWithDrones(c));
+  const missileTargets = CITIES.filter(c => canStrikeWithMissiles(c));
+
+  if (forcedTarget) {
+    openAttackTypeChoice(fromCity, forcedTarget);
+    return;
   }
+
+  const allTargets = new Set([...landTargets, ...droneTargets, ...missileTargets]);
+  if (allTargets.size === 0) return;
+
+  const dict = LANG[state.settings.language];
+  const list = document.getElementById('attack-targets');
+  const panel = document.getElementById('attack-target-panel');
+  panel.classList.remove('hidden');
+  list.innerHTML = '';
+
+  const dist = getRoadDistances();
+
+  Array.from(allTargets).forEach(target => {
+    const d = dist.get(target);
+    const canLand = landTargets.includes(target);
+    const canDrone = droneTargets.includes(target);
+    const canMissile = missileTargets.includes(target);
+
+    const tags = [];
+    if (canLand) tags.push('⚔️');
+    if (canDrone) tags.push('🛸');
+    if (canMissile) tags.push('🚀');
+
+    const row = document.createElement('div');
+    row.className = 'target-row';
+    row.innerHTML = `
+      <div>
+        <div class="target-name">${target.name} ${tags.join(' ')}</div>
+        <div class="target-info">
+          ${target.owner === 'aurora' ? dict.ownerAurora : dict.ownerVesper}
+          · Линия ${d ?? '?'}
+          · Сила: ${getCityPower(target).toFixed(1)}
+        </div>
+      </div>
+    `;
+    row.addEventListener('click', () => {
+      closeAttackTargetPanel();
+      openAttackTypeChoice(fromCity, target);
+    });
+    list.appendChild(row);
+  });
 }
 
 // ============ ПЕРЕБРОСКА ============
@@ -1186,8 +1506,10 @@ function openTransferCompositionModal(fromCity, toCity) {
   const modal = document.getElementById('send-modal');
   const title = document.getElementById('send-modal-title');
   const body = document.getElementById('send-modal-body');
+  const confirmBtn = document.getElementById('send-confirm-btn');
   const lang = state.settings.language;
   title.textContent = `🔄 ${fromCity.name} → ${toCity.name}`;
+  confirmBtn.style.display = 'flex';
 
   const update = () => {
     body.innerHTML = '';
@@ -1243,9 +1565,8 @@ function openTransferCompositionModal(fromCity, toCity) {
       });
     });
 
-    document.getElementById('send-confirm-btn').disabled = totalUnits === 0 || !hasFuel;
-    document.getElementById('send-confirm-btn').dataset.mode = 'transfer';
-    document.getElementById('send-confirm-btn').dataset.line = '1';
+    confirmBtn.disabled = totalUnits === 0 || !hasFuel;
+    confirmBtn.dataset.mode = 'transfer';
   };
   update();
   modal.classList.remove('hidden');
@@ -1260,8 +1581,8 @@ function resolveTransfer(fromCity, toCity, composition) {
   setEventMessage(`✅ Подкрепление прибыло в ${toCity.name}`, 'success');
 }
 
-// ============ АТАКА ============
-function openSendCompositionModal(fromCity, toCity, line = 1) {
+// ============ НАЗЕМНАЯ АТАКА ============
+function openSendCompositionModal(fromCity, toCity, attackType = 'land') {
   sendFromCity = fromCity;
   sendToCity = toCity;
   sendComposition = { ...fromCity.garrison };
@@ -1269,16 +1590,16 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
   const modal = document.getElementById('send-modal');
   const title = document.getElementById('send-modal-title');
   const body = document.getElementById('send-modal-body');
+  const confirmBtn = document.getElementById('send-confirm-btn');
   const lang = state.settings.language;
   title.textContent = `⚔️ ${fromCity.name} → ${toCity.name}`;
+  confirmBtn.style.display = 'flex';
 
   const update = () => {
     body.innerHTML = '';
 
     UNIT_ORDER.forEach(k => {
-      if (!ATTACK_UNITS.includes(k)) {
-        sendComposition[k] = 0;
-      }
+      if (!ATTACK_UNITS.includes(k)) sendComposition[k] = 0;
     });
 
     ATTACK_UNITS.forEach(key => {
@@ -1286,9 +1607,6 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
       if (available === 0) return;
       const current = sendComposition[key] || 0;
       const ut = UNIT_TYPES[key];
-
-      const plusDisabled = current >= available;
-      const minusDisabled = current <= 0;
 
       const row = document.createElement('div');
       row.className = 'send-row';
@@ -1298,9 +1616,9 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
           ${lang === 'ru' ? ut.ru : ut.en} (${available})
         </div>
         <div class="send-row-controls">
-          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${minusDisabled ? 'disabled' : ''}>−</button>
+          <button class="send-row-btn" data-unit="${key}" data-delta="-1" ${current <= 0 ? 'disabled' : ''}>−</button>
           <div class="send-row-value">${current}</div>
-          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${plusDisabled ? 'disabled' : ''}>+</button>
+          <button class="send-row-btn" data-unit="${key}" data-delta="1" ${current >= available ? 'disabled' : ''}>+</button>
         </div>
       `;
       body.appendChild(row);
@@ -1313,10 +1631,8 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
     const hasAmmo = state.resources.ammo >= cost.ammo;
     const hasFuel = state.resources.fuel >= cost.fuel;
 
-    // Превью боя
-    const defender = toCity;
-    const defPower = getCityPower(defender) * getDefenseMultiplier(defender) * (1 + state.tech.armor * 0.12);
-    const atkPower = totalPower * (1 + state.tech.combat * 0.12);
+    const defPower = getCityPower(toCity) * getDefenseMultiplier(toCity) * (1 + (state.tech.armor || 0) * 0.12);
+    const atkPower = totalPower * (1 + (state.tech.combat || 0) * 0.12);
     const preview = atkPower > defPower ? '✅ Победа' : '⚠️ Возможен провал';
 
     const summary = document.createElement('div');
@@ -1355,9 +1671,8 @@ function openSendCompositionModal(fromCity, toCity, line = 1) {
       });
     });
 
-    document.getElementById('send-confirm-btn').disabled = totalUnits === 0 || !hasAmmo || !hasFuel;
-    document.getElementById('send-confirm-btn').dataset.mode = 'attack';
-    document.getElementById('send-confirm-btn').dataset.line = '1';
+    confirmBtn.disabled = totalUnits === 0 || !hasAmmo || !hasFuel;
+    confirmBtn.dataset.mode = 'attack';
   };
   update();
   modal.classList.remove('hidden');
@@ -1400,7 +1715,7 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     to: sendToCity,
     composition: { ...sendComposition },
     progress: 0,
-    speed: 0.1 * weather.speedMult * dayEff.speedMult * speedMult,
+    speed: 0.2 * weather.speedMult * dayEff.speedMult * speedMult,
     type: isTransfer ? 'transfer' : 'attack',
     line: 1,
     phase: 'moving',
@@ -1838,7 +2153,7 @@ function applyApproachCasualties(atk, dt) {
   const defender = atk.to;
   const defenderGarrison = defender.garrison || {};
 
-  const defenderPower = UNIT_ORDER.reduce((s, k) =>
+  const defenderPower = GROUND_DEFENDERS.reduce((s, k) =>
     s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0
   );
 
@@ -1882,19 +2197,25 @@ function applyApproachCasualties(atk, dt) {
 }
 
 // ============ ПВО ============
+function getAARadius(aaCount) {
+  return Math.min(AA_MAX_RADIUS, AA_RADIUS + (aaCount - 1) * 0.5);
+}
+
 function getAACoverage(worldX, worldY, defenderOwner) {
   let totalAA = 0;
   let techLevel = 0;
 
   CITIES.forEach(city => {
     if (city.owner !== defenderOwner) return;
-    const cityX = city.x * MAP.TILE + MAP.TILE / 2;
-    const cityY = city.y * MAP.TILE + MAP.TILE / 2;
-    const dist = Math.hypot(cityX - worldX, cityY - worldY);
-    if (dist > AA_RADIUS * MAP.TILE) return;
 
     const aaCount = city.garrison?.aa || 0;
     if (aaCount === 0) return;
+
+    const cityX = city.x * MAP.TILE + MAP.TILE / 2;
+    const cityY = city.y * MAP.TILE + MAP.TILE / 2;
+    const dist = Math.hypot(cityX - worldX, cityY - worldY);
+    const radius = getAARadius(aaCount) * MAP.TILE;
+    if (dist > radius) return;
 
     totalAA += aaCount;
 
@@ -1943,25 +2264,100 @@ function applyAACheck(atk, dt, index) {
     if (Math.random() < chancePerUnit) shotDown++;
   }
 
-  if (shotDown > 0) {
-    atk.composition[atk.strikeUnit] -= shotDown;
+  if (shotDown === 0) return false;
 
-    state.captureEffects.push({
-      x: worldX / MAP.TILE,
-      y: worldY / MAP.TILE,
-      start: performance.now(),
-      duration: 500,
-      color: '#00d4ff',
-    });
+  atk.composition[atk.strikeUnit] -= shotDown;
 
-    if (atk.composition[atk.strikeUnit] <= 0) {
-      setEventMessage(`🛡️ ПВО сбила ${shotDown} ${atk.strikeUnit === 'drones' ? 'дронов' : 'ракет'}!`, 'success');
-      ACTIVE_ATTACKS.splice(index, 1);
-      updateMarchLoops();
-      return true;
+  // Определяем над чьим городом сбили
+  let overCity = null, minDist = Infinity;
+  CITIES.forEach(c => {
+    if (c.owner !== defenderOwner) return;
+    if ((c.garrison?.aa || 0) === 0) return;
+    const cx = c.x * MAP.TILE + MAP.TILE / 2;
+    const cy = c.y * MAP.TILE + MAP.TILE / 2;
+    const d = Math.hypot(cx - worldX, cy - worldY);
+    if (d < minDist) { minDist = d; overCity = c; }
+  });
+
+  const unitNamePlural = atk.strikeUnit === 'drones' ? 'дронов' : 'ракет';
+  const isFull = atk.composition[atk.strikeUnit] <= 0;
+
+  // Лог
+  state.interceptLog.push({
+    time: state.globalTime,
+    owner: defenderOwner,
+    city: overCity ? overCity.name : '?',
+    shotDown,
+    unitType: atk.strikeUnit,
+    isFullIntercept: isFull,
+  });
+  if (state.interceptLog.length > 20) state.interceptLog.shift();
+
+  // Визуальный эффект
+  state.captureEffects.push({
+    x: worldX / MAP.TILE,
+    y: worldY / MAP.TILE,
+    start: performance.now(),
+    duration: 500,
+    color: '#00d4ff',
+  });
+
+  // Уведомления
+  if (defenderOwner === state.faction) {
+    if (isFull) {
+      setEventMessage(`🛡️ Перехват: ${shotDown} ${unitNamePlural} над ${overCity ? overCity.name : 'территорией'}`, 'success');
+    } else {
+      setEventMessage(`🛡️ ПВО сбила ${shotDown} ${unitNamePlural} (осталось ${atk.composition[atk.strikeUnit]})`, 'warning');
     }
+  } else if (defenderOwner === AI.faction && atk.from?.owner === state.faction) {
+    setEventMessage(`⚠️ ИИ перехватил ${shotDown} ${unitNamePlural} над ${overCity ? overCity.name : 'территорией'}`, 'danger');
+  }
+
+  if (isFull) {
+    ACTIVE_ATTACKS.splice(index, 1);
+    updateMarchLoops();
+    return true;
   }
   return false;
+}
+
+// ============ РАКЕТНАЯ ОПАСНОСТЬ ============
+function checkMissileAlerts(dt) {
+  const incomingMissiles = ACTIVE_ATTACKS.filter(a =>
+    a.type === 'strike' &&
+    a.strikeUnit === 'missiles' &&
+    a.to.owner === state.faction &&
+    (!a.phase || a.phase === 'moving') &&
+    a.from.owner !== state.faction
+  );
+
+  incomingMissiles.forEach(m => {
+    const timeToImpact = (1 - m.progress) / Math.max(0.01, m.speed || 0.1);
+    let existing = state.missileAlerts.find(a => a.attackId === m);
+    if (!existing) {
+      existing = {
+        attackId: m,
+        target: m.to,
+        startTime: state.globalTime,
+        timeToImpact,
+      };
+      state.missileAlerts.push(existing);
+
+      setEventMessage(`🚨 РАКЕТНАЯ ОПАСНОСТЬ! Удар по ${m.to.name}`, 'danger');
+      playExplosion(0.4);
+
+      const aaCount = m.to.garrison?.aa || 0;
+      if (aaCount === 0) {
+        setTimeout(() => {
+          setEventMessage(`⚠️ ${m.to.name} без ПВО — ракета не будет сбита`, 'warning');
+        }, 800);
+      }
+    } else {
+      existing.timeToImpact = timeToImpact;
+    }
+  });
+
+  state.missileAlerts = state.missileAlerts.filter(a => ACTIVE_ATTACKS.includes(a.attackId));
 }
 
 // ============ СТРАТЕГИЧЕСКИЙ УДАР ============
@@ -2010,9 +2406,9 @@ function resolveStrike(atk) {
 function updateAttacks(dt) {
   for (let i = ACTIVE_ATTACKS.length - 1; i >= 0; i--) {
     const atk = ACTIVE_ATTACKS[i];
+    if (!atk) continue;
 
     if (!atk.phase || atk.phase === 'moving') {
-      // ПВО проверка для strike
       if (atk.type === 'strike') {
         const removed = applyAACheck(atk, dt, i);
         if (removed) continue;
@@ -2085,9 +2481,10 @@ function resolveBattle(fromCity, toCity, composition) {
   const defenseMult = getDefenseMultiplier(toCity);
 
   const attackPower = ATTACK_UNITS.reduce((s, k) => s + (attackerGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * combatBonus;
-  const defensePower = UNIT_ORDER.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
+  // В обороне участвуют только наземные юниты
+  const defensePower = GROUND_DEFENDERS.reduce((s, k) => s + (defenderGarrison[k] || 0) * UNIT_TYPES[k].power, 0) * armorBonus * defenseMult;
   const victory = attackPower > defensePower;
-  const attackerLosses = {}, defenderLosses = {}, survivors = { ...attackerGarrison };
+  const survivors = { ...attackerGarrison };
 
   if (victory) {
     const ratio = defensePower / Math.max(0.01, attackPower);
@@ -2095,15 +2492,21 @@ function resolveBattle(fromCity, toCity, composition) {
     UNIT_ORDER.forEach(k => {
       const count = attackerGarrison[k] || 0;
       const lost = Math.floor(count * lossRatio);
-      attackerLosses[k] = lost;
       survivors[k] = count - lost;
     });
-    UNIT_ORDER.forEach(k => { defenderLosses[k] = Math.ceil((defenderGarrison[k] || 0) * 0.85); });
 
     const wasEnemy = toCity.owner !== state.faction;
     toCity.owner = fromCity.owner;
+
+    // После захвата ПВО/ракеты/дроны уничтожаются
+    survivors.aa = 0;
+    survivors.missiles = 0;
+    survivors.drones = 0;
+
     toCity.garrison = { ...survivors };
     toCity.fortification = Math.max(0, toCity.fortification - 1);
+
+    roadDistCache = null;
 
     if (toCity.owner === state.faction && wasEnemy) {
       state.welfare = Math.max(0, state.welfare - 5);
@@ -2125,7 +2528,6 @@ function resolveBattle(fromCity, toCity, composition) {
     UNIT_ORDER.forEach(k => {
       const count = attackerGarrison[k] || 0;
       const lost = Math.ceil(count * lossRatio);
-      attackerLosses[k] = lost;
       survivors[k] = count - lost;
     });
     UNIT_ORDER.forEach(k => {
@@ -2134,14 +2536,12 @@ function resolveBattle(fromCity, toCity, composition) {
     UNIT_ORDER.forEach(k => {
       const count = defenderGarrison[k] || 0;
       const lost = Math.floor(count * 0.3);
-      defenderLosses[k] = lost;
       toCity.garrison[k] = Math.max(0, count - lost);
     });
     if (toCity.owner === state.faction) state.welfare = Math.max(0, state.welfare - 8);
   }
   state.welfare = Math.max(0, Math.min(100, state.welfare));
 
-  // Обратная связь ИИ
   if (attackerIsAI) {
     if (victory) {
       AI.memory.consecutiveWins++;
@@ -2239,7 +2639,6 @@ function initAI() {
   };
 }
 
-// ---------- Экономика ИИ ----------
 function calcAIMoneyIncome() {
   let cityIncome = 0;
   CITIES.forEach(c => {
@@ -2282,7 +2681,6 @@ function updateAIEconomy(dt) {
   state.aiResources.drones = Math.min(100, state.aiResources.drones + droneProd * dt);
 }
 
-// ---------- Вспомогательные ----------
 function getAICities() { return CITIES.filter(c => c.owner === AI.faction); }
 function getAIEnemyCities() { return CITIES.filter(c => c.owner !== AI.faction); }
 function aiCanAfford(resources, cost) { return resources.ammo >= cost.ammo && resources.fuel >= cost.fuel; }
@@ -2292,7 +2690,6 @@ function aiBuildCost(city, key) {
   return Math.round(base * Math.pow(1.10, count));
 }
 
-// ---------- Оценка ценности города ----------
 function calcCityStrategicValue(city) {
   let value = 1.0;
   const buildings = city.buildings || {};
@@ -2331,7 +2728,6 @@ function calcCityStrategicValue(city) {
   return value;
 }
 
-// ---------- Адаптация ----------
 function aiAdapt() {
   if (state.globalTime - AI.memory.lastAdaptTime < 30) return;
   AI.memory.lastAdaptTime = state.globalTime;
@@ -2359,7 +2755,7 @@ function aiAdapt() {
   AI.memory.playerStrength = ratio;
 
   if (ratio > 2.0) AI.memory.aggressionMod = 0.5;
-  else if (ratio < 0.6) AI.memory.aggressionMod = 1.5;
+  else if (ratio < 0.6) AI.memory.aggressionMod = Math.min(1.3, 1.0 + (0.6 - ratio));
   else AI.memory.aggressionMod = 1.0;
 }
 
@@ -2368,6 +2764,7 @@ function aiApplyStyleCounter(style) {
   if (style === 'aggressive') {
     p.minAttackPower = Math.max(p.minAttackPower, 15);
     p.buildPriority = Math.min(1, p.buildPriority + 0.2);
+    AI.memory.aggressionMod = Math.min(1.2, AI.memory.aggressionMod);
   } else if (style === 'economic') {
     p.attackCooldown = Math.max(15, p.attackCooldown - 10);
     p.targetPlayerBias = Math.min(2.0, p.targetPlayerBias + 0.3);
@@ -2376,7 +2773,6 @@ function aiApplyStyleCounter(style) {
   }
 }
 
-// ---------- Ранжирование целей ----------
 function aiRankTargets(candidates, p, sourceCity) {
   const ranked = [];
   candidates.forEach(target => {
@@ -2388,11 +2784,7 @@ function aiRankTargets(candidates, p, sourceCity) {
     const defense = getGarrisonTotal(target.garrison) + 1;
     const fortMult = 1 + (target.fortification || 0) * 0.3;
 
-    const road = ROADS.find(r =>
-      (r.from === sourceCity && r.to === target) ||
-      (r.to === sourceCity && r.from === target)
-    );
-    const roadBonus = road ? 1.3 : (target.owner === 'neutral' ? 0.8 : 0.5);
+    const roadBonus = canReachByRoad(sourceCity, target) ? 1.3 : 0.5;
 
     let score = (ownerBias * strategicValue * roadBonus) / (defense * fortMult);
 
@@ -2406,7 +2798,6 @@ function aiRankTargets(candidates, p, sourceCity) {
   return ranked;
 }
 
-// ---------- Защита ----------
 function findThreatenedAICity() {
   const incoming = ACTIVE_ATTACKS.filter(atk =>
     atk.to.owner === AI.faction &&
@@ -2430,7 +2821,7 @@ function aiReinforceCity(city, p) {
   const friendly = getAICities().filter(c => c !== city);
   const candidates = friendly
     .map(c => ({ city: c, dist: Math.hypot(c.x - city.x, c.y - city.y) }))
-    .filter(o => o.dist < 12 && getGarrisonTotal(o.city.garrison) > 3)
+    .filter(o => canReachByRoad(o.city, city) && getGarrisonTotal(o.city.garrison) > 3)
     .sort((a, b) => a.dist - b.dist);
 
   if (candidates.length === 0) return;
@@ -2454,7 +2845,7 @@ function aiReinforceCity(city, p) {
   const dayEff = getDayEffects();
   ACTIVE_ATTACKS.push({
     from: source, to: city, composition, progress: 0,
-    speed: 0.1 * weather.speedMult * dayEff.speedMult * 1.6,
+    speed: 0.2 * weather.speedMult * dayEff.speedMult * 1.6,
     type: 'transfer', line: 1, phase: 'moving',
     battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
     isAI: true,
@@ -2476,7 +2867,7 @@ function aiAccumulateForPunishment() {
 
   const nearby = getAICities()
     .map(c => ({ city: c, dist: Math.hypot(c.x - target.x, c.y - target.y) }))
-    .filter(o => o.dist < 15)
+    .filter(o => canReachByRoad(o.city, target))
     .sort((a, b) => a.dist - b.dist);
 
   if (nearby.length === 0) { AI_OPS.punishment.active = false; return; }
@@ -2511,7 +2902,7 @@ function aiLaunchPunishment() {
 
   const nearby = getAICities()
     .map(c => ({ city: c, dist: Math.hypot(c.x - target.x, c.y - target.y) }))
-    .filter(o => o.dist < 20)
+    .filter(o => canReachByRoad(o.city, target))
     .sort((a, b) => a.dist - b.dist);
 
   let launched = 0;
@@ -2535,7 +2926,7 @@ function aiLaunchPunishment() {
     ACTIVE_ATTACKS.push({
       from: city, to: target, composition,
       progress: 0,
-      speed: 0.1 * weather.speedMult * dayEff.speedMult,
+      speed: 0.2 * weather.speedMult * dayEff.speedMult,
       type: 'attack', line: 1, phase: 'moving',
       battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
       isAI: true,
@@ -2710,7 +3101,6 @@ function aiTryHire() {
 // ---------- Технологии ----------
 function aiTryResearch() {
   const order = [];
-
   const playerHasAir = state.resources.drones > 0 || state.resources.weapons >= 15;
 
   if (playerHasAir) order.push('aa');
@@ -2744,73 +3134,91 @@ function aiTryStrike() {
 
   if (!hasDrones && !hasMissiles) return;
 
+  const aiCities = getAICities();
+  if (aiCities.length === 0) return;
+
+  // Линии от городов ИИ
+  const dist = new Map();
+  const queue = [];
+  aiCities.forEach(c => { dist.set(c, 0); queue.push(c); });
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    const d = dist.get(cur);
+    getRoadsFrom(cur).forEach(nb => {
+      if (!dist.has(nb) || dist.get(nb) > d + 1) {
+        dist.set(nb, d + 1);
+        queue.push(nb);
+      }
+    });
+  }
+
   const targets = CITIES.filter(c => c.owner === state.faction).filter(c => {
     const b = c.buildings || {};
-    const economyValue =
+    const value =
       (b.mine || 0) * 2 + (b.oilWell || 0) * 3 +
       (b.ammoFactory || 0) * 2 + (b.weaponFactory || 0) * 2 +
       (b.tankFactory || 0) * 2.5;
-    return economyValue > 0;
+    return value > 0;
   });
 
   if (targets.length === 0) return;
 
-  const aiCities = getAICities();
-  if (aiCities.length === 0) return;
-
   const ranked = targets.map(t => {
+    const d = dist.get(t) ?? 99;
     const b = t.buildings || {};
     const value =
       (b.mine || 0) * 2 + (b.oilWell || 0) * 3 +
       (b.ammoFactory || 0) * 2 + (b.weaponFactory || 0) * 2 +
       (b.tankFactory || 0) * 2.5;
 
-    let minDist = Infinity;
+    const canDrone = hasDrones && d >= 2;
+    const canMissile = hasMissiles && d >= 3;
+    if (!canDrone && !canMissile) return null;
+
+    let bestSource = aiCities[0], bestDist = Infinity;
     aiCities.forEach(ac => {
-      const d = Math.hypot(ac.x - t.x, ac.y - t.y);
-      if (d < minDist) minDist = d;
+      const dd = Math.hypot(ac.x - t.x, ac.y - t.y);
+      if (dd < bestDist) { bestDist = dd; bestSource = ac; }
     });
-    return { target: t, score: value / Math.max(1, minDist) };
-  }).sort((a, b) => b.score - a.score);
 
-  const best = ranked[0].target;
+    return { target: t, source: bestSource, score: value / Math.max(1, bestDist), canDrone, canMissile };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
 
-  const useMissiles = hasMissiles && Math.random() < 0.4;
+  if (ranked.length === 0) return;
+  const pick = ranked[0];
+
+  const useMissiles = pick.canMissile && (!pick.canDrone || Math.random() < 0.4);
   const unitType = useMissiles ? 'missiles' : 'drones';
   const count = useMissiles ? 1 : STRIKE_COST.drones.count;
-  const cost = STRIKE_COST[unitType];
 
   if (unitType === 'drones') {
     state.aiResources.drones -= count;
   } else {
-    state.aiResources.weapons -= cost.ammo;
-    state.aiResources.fuel -= cost.fuel;
+    state.aiResources.weapons -= STRIKE_COST.missiles.ammo;
+    state.aiResources.fuel -= STRIKE_COST.missiles.fuel;
   }
-
-  const source = aiCities[Math.floor(Math.random() * aiCities.length)];
 
   const composition = makeEmptyGarrison();
   composition[unitType] = count;
 
   const weather = WEATHER[state.weather];
   const dayEff = getDayEffects();
-  const speedMult = unitType === 'missiles' ? 1.8 : 1.2;
+  const speedMult = unitType === 'missiles' ? 3.0 : 2.0;
 
   ACTIVE_ATTACKS.push({
-    from: source, to: best, composition,
+    from: pick.source, to: pick.target, composition,
     progress: 0,
-    speed: 0.1 * weather.speedMult * dayEff.speedMult * speedMult,
-    type: 'strike',
-    strikeUnit: unitType,
+    speed: 0.2 * weather.speedMult * dayEff.speedMult * speedMult,
+    type: 'strike', strikeUnit: unitType,
     line: 1, phase: 'moving',
     battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
     isAI: true,
   });
 
   if (unitType === 'missiles') {
-    setEventMessage(`🚀 Ракетный удар по ${best.name}!`, 'danger');
+    setEventMessage(`🚀 Ракетный удар по ${pick.target.name}!`, 'danger');
   } else {
-    setEventMessage(`🛸 Дроны-камикадзе летят к ${best.name}!`, 'warning');
+    setEventMessage(`🛸 Дроны-камикадзе летят к ${pick.target.name}!`, 'warning');
   }
 
   updateMarchLoops();
@@ -2828,22 +3236,11 @@ function aiTryAttack(p) {
 
   if (sources.length === 0) return;
 
-  const enemies = getAIEnemyCities();
-  if (enemies.length === 0) return;
-
   for (const source of sources) {
-    const reachable = enemies.filter(target => {
-      const road = ROADS.find(r =>
-        (r.from === source.city && r.to === target) ||
-        (r.to === source.city && r.from === target)
-      );
-      if (road) return true;
-      if (target.owner === 'neutral') {
-        const dist = Math.hypot(target.x - source.city.x, target.y - source.city.y);
-        return dist < 10;
-      }
-      return false;
-    });
+    const reachable = CITIES.filter(target =>
+      target.owner !== AI.faction &&
+      canReachByRoad(source.city, target)
+    );
 
     if (reachable.length === 0) continue;
 
@@ -2890,7 +3287,7 @@ function aiTryAttack(p) {
       ACTIVE_ATTACKS.push({
         from: source.city, to: target, composition,
         progress: 0,
-        speed: 0.1 * weather.speedMult * dayEff.speedMult * 1.0,
+        speed: 0.2 * weather.speedMult * dayEff.speedMult,
         type: 'attack', line: 1, phase: 'moving',
         battleProgress: 0, battleDuration: 0, casualtyBuffer: 0,
         isAI: true,
@@ -2913,32 +3310,22 @@ function aiThink() {
   aiAdapt();
 
   const threatenedCity = findThreatenedAICity();
-  if (threatenedCity) {
-    aiReinforceCity(threatenedCity, p);
-  }
+  if (threatenedCity) aiReinforceCity(threatenedCity, p);
 
-  // Карательная операция
   if (AI_OPS.punishment.active) {
     const elapsed = state.globalTime - AI_OPS.punishment.startTime;
-    if (elapsed >= AI_OPS.punishment.duration) {
-      aiLaunchPunishment();
-    } else {
-      aiAccumulateForPunishment();
-      return;
-    }
+    if (elapsed >= AI_OPS.punishment.duration) aiLaunchPunishment();
+    else { aiAccumulateForPunishment(); return; }
   }
 
-  // Триггер карательной операции
   const playerStrategics = findPlayerStrategicCities();
   if (playerStrategics.length > 0 && !AI_OPS.punishment.active &&
       state.globalTime - (AI.memory.lastPunishmentTime || -999) > 180) {
     const target = playerStrategics[0];
     const targetDefense = getCityPower(target) * getDefenseMultiplier(target);
     AI_OPS.punishment = {
-      active: true,
-      target,
-      startTime: state.globalTime,
-      duration: 90,
+      active: true, target,
+      startTime: state.globalTime, duration: 90,
       requiredPower: targetDefense * 1.6,
     };
     setEventMessage(`⚠️ Разведка: враг готовит удар по ${target.name}`, 'warning');
@@ -2953,9 +3340,7 @@ function aiThink() {
 
   const timeSinceAttack = state.globalTime - AI.memory.lastAttackTime;
   const adjustedCooldown = p.attackCooldown / AI.memory.aggressionMod;
-  if (timeSinceAttack > adjustedCooldown) {
-    aiTryAttack(p);
-  }
+  if (timeSinceAttack > adjustedCooldown) aiTryAttack(p);
 }
 
 function updateAI(dt) {
@@ -2998,24 +3383,25 @@ function getDarknessAlpha() {
 }
 
 function getSituation() {
-  const timeSince = state.globalTime - state.lastAttackTime;
   const enemyAttacksOnUs = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.enemyFaction && atk.to.owner === state.faction && atk.type !== 'transfer');
   const ourAttacks = ACTIVE_ATTACKS.filter(atk => atk.from.owner === state.faction && atk.type !== 'transfer');
   const critical = enemyAttacksOnUs.some(atk => {
+    if (atk.type === 'strike') return false;
     const defPower = getCityPower(atk.to) * getDefenseMultiplier(atk.to) * (1 + state.tech.armor * 0.12);
     const atkPower = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0) * (1 + state.tech.combat * 0.12);
     return atkPower > defPower;
   });
-  if (critical) return { icon: '💀', color: 'critical', ru: 'Критическая', en: 'Critical' };
-  if (enemyAttacksOnUs.length > 0) return { icon: '🔴', color: 'red', ru: 'Враг наступает', en: 'Enemy' };
-  if (ourAttacks.length > 0) return { icon: '🟡', color: 'yellow', ru: 'Напряжение', en: 'Tension' };
-  return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
+  if (critical) return { color: 'critical' };
+  if (enemyAttacksOnUs.length > 0) return { color: 'red' };
+  if (ourAttacks.length > 0) return { color: 'yellow' };
+  return { color: 'green' };
 }
 
 function getCityThreat(city) {
   let totalEnemyPower = 0;
   ACTIVE_ATTACKS.forEach(atk => {
-    if (atk.to === city && atk.from.owner !== city.owner && atk.type === 'attack' && (!atk.phase || atk.phase === 'moving')) {
+    if (atk.to === city && atk.from.owner !== city.owner && atk.type === 'attack' &&
+        (!atk.phase || atk.phase === 'moving')) {
       const atkPower = ATTACK_UNITS.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
       totalEnemyPower += atkPower;
     }
@@ -3055,6 +3441,7 @@ function getTension() {
   tension += Math.min(0.3, ACTIVE_ATTACKS.length * 0.1);
   if (state.welfare < 30) tension += 0.15;
   if (state.services.corruption > 60) tension += 0.1;
+  if (state.missileAlerts.length > 0) tension = Math.max(tension, 0.9);
 
   return Math.min(1, tension);
 }
@@ -3218,10 +3605,12 @@ function update(dt) {
   if (state.mobilizeCooldown > 0) state.mobilizeCooldown = Math.max(0, state.mobilizeCooldown - dt);
 
   updateAttacks(dt);
+  checkMissileAlerts(dt);
   updateAI(dt);
 
   const incomingEnemyAttack = ACTIVE_ATTACKS.find(atk =>
-    atk.from.owner === state.enemyFaction && atk.to.owner === state.faction && atk.type !== 'transfer'
+    atk.from.owner === state.enemyFaction && atk.to.owner === state.faction &&
+    atk.type === 'attack'
   );
   if (incomingEnemyAttack && !state.warnedAboutAttack) {
     state.warnedAboutAttack = true;
@@ -3321,12 +3710,25 @@ function updateHUD() {
                  : 'idle';
   } else {
     if (state.statusOverride) state.statusOverride = null;
-    displayText = '';
-    displayColor = 'idle';
   }
 
   sitStatus.textContent = displayText || '—';
   sitLabel.className = 'situation-label status-' + displayColor;
+
+  // Баннер ракетной опасности
+  const mw = document.getElementById('missile-warning');
+  if (mw) {
+    const active = state.missileAlerts[0];
+    if (active) {
+      mw.classList.remove('hidden');
+      const tgt = document.getElementById('missile-warning-target');
+      const etaEl = document.getElementById('missile-warning-eta');
+      if (tgt) tgt.textContent = active.target.name;
+      if (etaEl) etaEl.textContent = Math.max(0, active.timeToImpact).toFixed(1) + 'с';
+    } else {
+      mw.classList.add('hidden');
+    }
+  }
 }
 
 // ============ РЕНДЕР ============
@@ -3363,7 +3765,6 @@ function renderMap() {
 
 function renderAACoverage() {
   const tileSize = MAP.TILE * camera.zoom;
-  const radius = AA_RADIUS * MAP.TILE * camera.zoom;
 
   CITIES.forEach(c => {
     const aaCount = c.garrison?.aa || 0;
@@ -3372,8 +3773,12 @@ function renderAACoverage() {
     const sx = (c.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
     const sy = (c.y * MAP.TILE - camera.y) * camera.zoom + tileSize / 2;
 
+    const radiusTiles = getAARadius(aaCount);
+    const radius = radiusTiles * MAP.TILE * camera.zoom;
+
     const isPlayer = c.owner === state.faction;
-    const color = isPlayer ? 'rgba(0, 212, 255, 0.25)' : 'rgba(255, 59, 92, 0.25)';
+    const color = isPlayer ? 'rgba(0, 212, 255, 0.35)' : 'rgba(255, 59, 92, 0.35)';
+    const fill = isPlayer ? 'rgba(0, 212, 255, 0.05)' : 'rgba(255, 59, 92, 0.05)';
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
@@ -3383,7 +3788,7 @@ function renderAACoverage() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = isPlayer ? 'rgba(0, 212, 255, 0.04)' : 'rgba(255, 59, 92, 0.04)';
+    ctx.fillStyle = fill;
     ctx.fill();
   });
 }
@@ -3724,12 +4129,6 @@ function renderCities() {
         ctx.arc(sx + tileSize / 2, sy + tileSize / 2, waveRadius, 0, Math.PI * 2);
         ctx.stroke();
       }
-
-      if (threat === 2) {
-        const glowPulse = 0.6 + Math.sin(now / 200) * 0.3;
-        ctx.shadowColor = '#ff3b5c';
-        ctx.shadowBlur = 24 * glowPulse;
-      }
     }
 
     ctx.shadowColor = color;
@@ -3790,7 +4189,10 @@ function startGame() {
   seed = 12345;
   ACTIVE_ATTACKS = [];
   state.captureEffects = [];
+  state.interceptLog = [];
+  state.missileAlerts = [];
   state.aiMoney = 0;
+  roadDistCache = null;
 
   generateCities();
   generateRoads();
