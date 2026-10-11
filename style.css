@@ -35,7 +35,7 @@ body {
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .hidden { display: none !important; }
 
-/* ===== SVG ИКОНКИ + ПОКРАСКА ===== */
+/* ===== SVG ИКОНКИ (БЕЗ ПОКРАСКИ) ===== */
 .svg-icon {
   width: 18px;
   height: 18px;
@@ -60,35 +60,12 @@ body {
   object-fit: contain;
 }
 
-/* Покраска белых SVG через filter */
-/* Базовая идея: invert(1) делает белое чёрным, потом sepia+hue-rotate даёт нужный оттенок */
-
-/* Cyan #00d4ff */
-.icon-cyan {
-  filter: invert(70%) sepia(88%) saturate(1500%) hue-rotate(155deg) brightness(105%) contrast(101%);
-}
-
-/* Красный #ff3b5c */
-.icon-red {
-  filter: invert(35%) sepia(90%) saturate(2500%) hue-rotate(330deg) brightness(105%) contrast(101%);
-}
-
-/* Золотой #f5b800 */
-.icon-gold {
-  filter: invert(75%) sepia(90%) saturate(700%) hue-rotate(5deg) brightness(105%) contrast(101%);
-}
-
-/* Синий #1e88e5 */
-.icon-blue {
-  filter: invert(48%) sepia(85%) saturate(1500%) hue-rotate(190deg) brightness(100%) contrast(101%);
-}
-
-/* Зелёный #43a047 */
-.icon-green {
-  filter: invert(55%) sepia(60%) saturate(500%) hue-rotate(80deg) brightness(95%) contrast(101%);
-}
-
-/* Белый (без изменений) */
+/* Классы цветов оставлены пустыми — фильтры отключены */
+.icon-cyan,
+.icon-red,
+.icon-gold,
+.icon-blue,
+.icon-green,
 .icon-white {
   filter: none;
 }
@@ -378,10 +355,6 @@ body {
   border-color: #1e88e5;
 }
 
-.actions-tab.active .svg-icon {
-  filter: invert(100%) brightness(200%);
-}
-
 #actions-close {
   background: none; border: none; color: var(--text-dim);
   font-size: 18px; cursor: pointer; padding: 4px 8px;
@@ -590,7 +563,7 @@ body {
 }
 
 .build-info { flex: 1; min-width: 0; }
-.build-name { color: #fff; font-size: 13px; font-weight: 600; }
+.build-name { color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .build-count { color: var(--cyan); font-size: 11px; font-weight: 600; margin-top: 2px; }
 
 .build-action {
