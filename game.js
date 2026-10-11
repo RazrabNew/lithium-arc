@@ -189,6 +189,9 @@ const state = {
   lastEventText: '',
   lastEventType: 'info',
   lastEventTime: -999,
+  statusOverride: null,
+  statusOverrideUntil: 0,
+  warnedAboutAttack: false,
 };
 
 const RESOURCE_MAX = { ammo: 300, weapons: 200, tanks: 40, fuel: 300, drones: 100 };
@@ -287,11 +290,9 @@ function getTerrainColor(x, y, owner) {
 function setEventMessage(text, type = 'info') {
   state.lastEventText = text;
   state.lastEventType = type;
-  const el = document.getElementById('event-ticker');
-  if (!el) return;
-  el.textContent = text;
-  el.classList.remove('warning', 'danger', 'success');
-  if (type !== 'info') el.classList.add(type);
+  state.lastEventTime = state.globalTime;
+  state.statusOverride = { text, type };
+  state.statusOverrideUntil = performance.now() + 3000;
 }
 
 // ============ МЕНЮ ============
@@ -535,7 +536,6 @@ function generateOverlayCanvas() {
     for (let k = 0; k < polygon.length; k++) {
       const p1 = polygon[k];
       const p2 = polygon[(k + 1) % polygon.length];
-
       const steps = 4;
       for (let s = 0; s < steps; s++) {
         const t = s / steps;
@@ -989,7 +989,7 @@ document.getElementById('send-confirm-btn').addEventListener('click', () => {
     speed: 0.1 * weather.speedMult * dayEff.speedMult,
   });
   state.lastAttackTime = state.globalTime;
-  setEventMessage(`⚔️ Войска отправлены: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
+  setEventMessage(`⚔️ Войска: ${sendFromCity.name} → ${sendToCity.name}`, 'warning');
   document.getElementById('send-modal').classList.add('hidden');
   closeCityPanel();
   sendFromCity = null; sendToCity = null; sendComposition = null;
@@ -1397,6 +1397,7 @@ function updateAttacks(dt) {
     }
   }
 }
+
 function resolveBattle(fromCity, toCity, composition) {
   const attackerGarrison = composition;
   const defenderGarrison = { ...toCity.garrison };
@@ -1450,36 +1451,8 @@ function resolveBattle(fromCity, toCity, composition) {
     setEventMessage(`💀 Потеряли войска под ${toCity.name}`, 'danger');
   }
 
-  showBattleResult(fromCity, toCity, victory, attackerGarrison, defenderGarrison, attackerLosses, defenderLosses);
   checkVictory();
 }
-
-function showBattleResult(fromCity, toCity, victory, attacker, defender, attackerLosses, defenderLosses) {
-  const modal = document.getElementById('battle-modal');
-  const title = document.getElementById('battle-modal-title');
-  const body = document.getElementById('battle-modal-body');
-  const lang = state.settings.language;
-  title.textContent = `${lang === 'ru' ? 'Бой за' : 'Battle for'} ${toCity.name}`;
-  const fmtG = (g, losses) => UNIT_ORDER.filter(k => (g[k] || 0) > 0)
-    .map(k => `<img class="svg-icon-inline" src="icons/${UNIT_TYPES[k].icon}" alt="">${g[k]}${(losses[k] || 0) > 0 ? `(−${losses[k]})` : ''}`).join(' ') || '—';
-  body.innerHTML = `
-    <div class="battle-result ${victory ? 'battle-victory' : 'battle-defeat'}">
-      <h3>${victory ? '✅ ' + (lang === 'ru' ? 'ПОБЕДА' : 'VICTORY') : '💀 ' + (lang === 'ru' ? 'ПОРАЖЕНИЕ' : 'DEFEAT')}</h3>
-      <div style="color: #94a3b8; font-size: 12px; margin-top: 6px;">
-        ${victory ? `Захвачен ${toCity.name}` : `Отступили в ${fromCity.name}`}
-      </div>
-    </div>
-    <div class="battle-row"><span>Атакующий:</span><span>${fmtG(attacker, attackerLosses)}</span></div>
-    <div class="battle-row"><span>Защитник:</span><span>${fmtG(defender, defenderLosses)}</span></div>
-  `;
-  modal.classList.remove('hidden');
-}
-document.getElementById('battle-modal-close').addEventListener('click', () => {
-  document.getElementById('battle-modal').classList.add('hidden');
-});
-document.getElementById('battle-ok-btn').addEventListener('click', () => {
-  document.getElementById('battle-modal').classList.add('hidden');
-});
 
 // ============ ДЕНЬ/НОЧЬ / ПОГОДА ============
 function getCurrentPhase() {
@@ -1526,6 +1499,21 @@ function getSituation() {
   return { icon: '🟢', color: 'green', ru: 'Затишье', en: 'Calm' };
 }
 
+function getCityThreat(city) {
+  let totalEnemyPower = 0;
+  ACTIVE_ATTACKS.forEach(atk => {
+    if (atk.to === city && atk.from.owner === state.enemyFaction) {
+      const atkPower = UNIT_ORDER.reduce((s, k) => s + (atk.composition[k] || 0) * UNIT_TYPES[k].power, 0);
+      totalEnemyPower += atkPower;
+    }
+  });
+  if (totalEnemyPower === 0) return 0;
+  const defensePower = getCityPower(city) * getDefenseMultiplier(city) * (1 + state.tech.armor * 0.12);
+  const combatBonus = 1 + state.tech.combat * 0.12;
+  if (totalEnemyPower * combatBonus > defensePower) return 2;
+  return 1;
+}
+
 // ============ ЭКГ-МОНИТОР ОБСТАНОВКИ ============
 let situationCtx = null;
 let situationPoints = [];
@@ -1560,7 +1548,6 @@ function getTension() {
 
 function getSituationY() {
   const tension = getTension();
-  const baseY = 0.75;
   const targetY = 0.75 - tension * 0.6;
   const noise = (Math.random() - 0.5) * 0.08;
   return Math.max(0.05, Math.min(0.95, targetY + noise));
@@ -1720,18 +1707,15 @@ function update(dt) {
 
   updateAttacks(dt);
 
-  if (state.globalTime - state.lastEventTime > 15) {
-    if (state.welfare < 30) {
-      setEventMessage(`⚠️ Благосостояние критически низкое!`, 'danger');
-    } else if (state.services.corruption > 60) {
-      setEventMessage(`🕳️ Коррупция растёт: ${Math.floor(state.services.corruption)}%`, 'danger');
-    } else if (state.weather !== 'clear') {
-      setEventMessage(`🌦️ Погода: ${WEATHER[state.weather].ru}`, 'warning');
-    } else {
-      setEventMessage(`🟢 Обстановка стабильна`, 'info');
-    }
-    state.lastEventTime = state.globalTime;
+  // Авто-предупреждение о вражеской атаке
+  const incomingEnemyAttack = ACTIVE_ATTACKS.find(atk =>
+    atk.from.owner === state.enemyFaction && atk.to.owner === state.faction
+  );
+  if (incomingEnemyAttack && !state.warnedAboutAttack) {
+    state.warnedAboutAttack = true;
+    setEventMessage(`🚨 Враг атакует ${incomingEnemyAttack.to.name}!`, 'danger');
   }
+  if (!incomingEnemyAttack) state.warnedAboutAttack = false;
 
   if (state.welfare <= 0) {
     state.gameOver = true;
@@ -1810,13 +1794,29 @@ function updateHUD() {
   document.getElementById('weather-name').textContent = lang === 'ru' ? weather.ru : weather.en;
   document.getElementById('weather-effect').textContent = 'скорость ×' + weather.speedMult.toFixed(1);
 
-  const sit = getSituation();
+  // Обстановка — только временные сообщения
   const sitLabel = document.getElementById('situation-label');
   const sitStatus = document.getElementById('situation-status');
-  if (sitLabel && sitStatus) {
-    sitStatus.textContent = lang === 'ru' ? sit.ru : sit.en;
-    sitLabel.className = 'situation-label status-' + sit.color;
+
+  const now = performance.now();
+  let displayText = '';
+  let displayColor = 'idle';
+
+  if (state.statusOverride && now < state.statusOverrideUntil) {
+    displayText = state.statusOverride.text;
+    const t = state.statusOverride.type;
+    displayColor = t === 'danger' ? 'critical'
+                 : t === 'warning' ? 'yellow'
+                 : t === 'success' ? 'green'
+                 : 'idle';
+  } else {
+    if (state.statusOverride) state.statusOverride = null;
+    displayText = '';
+    displayColor = 'idle';
   }
+
+  sitStatus.textContent = displayText || '—';
+  sitLabel.className = 'situation-label status-' + displayColor;
 }
 
 // ============ РЕНДЕР ============
@@ -1850,11 +1850,10 @@ function renderMap() {
   renderVignette(w, h);
 }
 
-// Усиленная сетка
 function renderGrid(w, h) {
   if (camera.zoom < 0.5) return;
 
-  const step = MAP.TILE * 2;  // каждые 2 тайла
+  const step = MAP.TILE * 2;
   const alpha = camera.zoom > 1.2 ? 0.20 : camera.zoom > 0.8 ? 0.14 : 0.09;
 
   ctx.strokeStyle = `rgba(140, 200, 240, ${alpha})`;
@@ -1880,10 +1879,8 @@ function renderGrid(w, h) {
     ctx.lineTo(w, sy);
     ctx.stroke();
   }
-
   ctx.setLineDash([]);
 
-  // Крупная сетка — каждые 8 тайлов, сплошная
   const bigStep = MAP.TILE * 8;
   ctx.strokeStyle = `rgba(140, 200, 240, ${alpha * 1.8})`;
   ctx.lineWidth = 1;
@@ -1907,7 +1904,6 @@ function renderGrid(w, h) {
   }
   ctx.setLineDash([]);
 
-  // Подписи координат
   if (camera.zoom > 0.9) {
     ctx.font = `bold ${Math.max(9, 10 * camera.zoom)}px -apple-system, sans-serif`;
     ctx.fillStyle = `rgba(140, 200, 240, ${alpha * 3})`;
@@ -1917,8 +1913,6 @@ function renderGrid(w, h) {
       const sx = (wx - camera.x) * camera.zoom;
       ctx.fillText('X' + Math.floor(wx / MAP.TILE), sx + 3, 3);
     }
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
     for (let wy = startBY; wy <= endY; wy += bigStep) {
       const sy = (wy - camera.y) * camera.zoom;
       ctx.fillText('Y' + Math.floor(wy / MAP.TILE), 3, sy + 3);
@@ -2037,6 +2031,8 @@ function renderRoads() {
 
 function renderAttacks() {
   const tileSize = MAP.TILE * camera.zoom;
+  const now = performance.now();
+
   ACTIVE_ATTACKS.forEach(atk => {
     const a = atk.from, b = atk.to;
     const x1 = (a.x * MAP.TILE - camera.x) * camera.zoom + tileSize / 2;
@@ -2046,8 +2042,19 @@ function renderAttacks() {
     const cx = x1 + (x2 - x1) * atk.progress;
     const cy = y1 + (y2 - y1) * atk.progress;
 
-    ctx.strokeStyle = '#00ff88';
-    ctx.globalAlpha = 0.3;
+    const attacker = atk.from.owner;
+    const isEnemyAttackOnUs = attacker === state.enemyFaction && b.owner === state.faction;
+    const isOurAttack = attacker === state.faction;
+
+    let color;
+    if (isEnemyAttackOnUs) color = '#ff3b5c';
+    else if (isOurAttack) color = '#00ff88';
+    else color = '#ff9500';
+
+    const pulseAlpha = isEnemyAttackOnUs ? 0.4 + Math.sin(now / 150) * 0.3 : 0.3;
+
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = pulseAlpha;
     ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
@@ -2055,19 +2062,34 @@ function renderAttacks() {
     ctx.stroke();
 
     ctx.globalAlpha = 1;
-    ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur = 14;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = isEnemyAttackOnUs ? 20 : 14;
+    ctx.lineWidth = Math.max(2, 3 * camera.zoom);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(cx, cy);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    const pulse = 1 + Math.sin(performance.now() / 200) * 0.3;
-    ctx.fillStyle = '#00ff88';
+    const pointSize = isEnemyAttackOnUs ? 8 + Math.sin(now / 150) * 2 : 6 + Math.sin(now / 200) * 1;
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = isEnemyAttackOnUs ? 20 : 14;
     ctx.beginPath();
-    ctx.arc(cx, cy, 6 * camera.zoom * pulse, 0, Math.PI * 2);
+    ctx.arc(cx, cy, pointSize * camera.zoom, 0, Math.PI * 2);
     ctx.fill();
+
+    if (isEnemyAttackOnUs) {
+      const ringPulse = 1 + Math.sin(now / 150) * 0.4;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 10 * camera.zoom * ringPulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.shadowBlur = 0;
   });
 }
 
@@ -2088,6 +2110,33 @@ function renderCities() {
 
     renderCityShadow(sx + tileSize / 2, sy + tileSize / 2, radius);
 
+    // Пульс угрозы
+    const threat = getCityThreat(c);
+    if (threat > 0) {
+      const now = performance.now();
+      const pulseFreq = threat === 2 ? 400 : 700;
+      const maxRadius = radius + (threat === 2 ? 22 : 14);
+      const waveCount = threat === 2 ? 2 : 1;
+
+      for (let w = 0; w < waveCount; w++) {
+        const wavePhase = ((now / pulseFreq) + w * 0.5) % 1;
+        const waveRadius = radius + (maxRadius - radius) * wavePhase;
+        const waveAlpha = (1 - wavePhase) * (threat === 2 ? 0.7 : 0.4);
+
+        ctx.strokeStyle = `rgba(255, 59, 92, ${waveAlpha})`;
+        ctx.lineWidth = threat === 2 ? 2.5 : 1.8;
+        ctx.beginPath();
+        ctx.arc(sx + tileSize / 2, sy + tileSize / 2, waveRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (threat === 2) {
+        const glowPulse = 0.6 + Math.sin(now / 200) * 0.3;
+        ctx.shadowColor = '#ff3b5c';
+        ctx.shadowBlur = 24 * glowPulse;
+      }
+    }
+
     ctx.shadowColor = color;
     ctx.shadowBlur = c.type === 'capital' ? 24 : 12;
     ctx.fillStyle = color;
@@ -2100,12 +2149,6 @@ function renderCities() {
     ctx.beginPath();
     ctx.arc(sx + tileSize / 2, sy + tileSize / 2, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
-
-    const bTotal = Object.values(c.buildings || {}).reduce((a, b) => a + b, 0);
-    if (bTotal >= 5 && camera.zoom > 0.7) {
-      ctx.font = `${Math.max(12, 14 * camera.zoom)}px sans-serif`;
-      ctx.fillText('⚠️', sx + tileSize / 2 + radius + 6, sy + tileSize / 2 - radius);
-    }
 
     const gTotal = getGarrisonTotal(c.garrison || {});
     if (gTotal > 0 && camera.zoom > 0.7) {
@@ -2171,8 +2214,6 @@ function startGame() {
   initSituationCanvas();
   window.addEventListener('resize', initSituationCanvas);
   situationPoints = [];
-
-  setEventMessage('Добро пожаловать в Литийную Дугу', 'info');
 
   lastTime = performance.now();
   requestAnimationFrame(loop);

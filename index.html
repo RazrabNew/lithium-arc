@@ -109,14 +109,14 @@
       </div>
 
       <div class="hud-row weather-row">
-        <div class="stat weather-stat">
+        <div class="stat weather-stat weather-half">
           <img class="svg-icon" id="time-icon" src="icons/sun.svg" alt="">
           <div class="stat-body">
             <span class="value" id="time-name">День</span>
             <span class="sub" id="game-date">День 1, 00:00</span>
           </div>
         </div>
-        <div class="stat weather-stat weather-stat-wide">
+        <div class="stat weather-stat weather-half">
           <img class="svg-icon" id="weather-icon" src="icons/sun.svg" alt="">
           <div class="stat-body">
             <span class="value" id="weather-name">Ясно</span>
@@ -126,14 +126,10 @@
       </div>
 
       <div class="hud-row situation-row">
-        <div class="situation-label" id="situation-label">
-          <span id="situation-status">Затишье</span>
-        </div>
         <canvas id="situation-canvas" class="situation-canvas"></canvas>
-      </div>
-
-      <div class="hud-row event-row">
-        <div class="event-ticker" id="event-ticker">Добро пожаловать в Литийную Дугу</div>
+        <div class="situation-label status-idle" id="situation-label">
+          <span id="situation-status">—</span>
+        </div>
       </div>
 
       <div class="hud-row controls-row">
@@ -545,18 +541,6 @@
         </div>
         <div id="send-modal-body"></div>
         <button id="send-confirm-btn" class="action-btn" style="margin-top:12px;justify-content:center;">ОТПРАВИТЬ</button>
-      </div>
-    </div>
-
-    <!-- Модалка боя -->
-    <div id="battle-modal" class="build-modal hidden">
-      <div class="build-modal-content">
-        <div class="build-modal-header">
-          <span class="build-modal-title" id="battle-modal-title">Бой</span>
-          <button id="battle-modal-close">✕</button>
-        </div>
-        <div id="battle-modal-body"></div>
-        <button id="battle-ok-btn" class="action-btn" style="margin-top:12px;justify-content:center;">OK</button>
       </div>
     </div>
 
